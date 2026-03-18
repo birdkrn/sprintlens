@@ -92,6 +92,32 @@ def create_app() -> Flask:
             schedule=schedule,
         )
 
+    @app.route("/partials/dashboard")
+    def partials_dashboard():
+        """HTMX 파셜: 대시보드 콘텐츠."""
+        report = None
+        schedule = None
+
+        if report_service:
+            try:
+                report = report_service.generate_sprint_report()
+            except Exception:
+                logger.exception("스프린트 리포트 생성 실패")
+
+        if confluence_service and config.confluence_sprint_page_id:
+            try:
+                schedule = confluence_service.get_sprint_schedule(
+                    config.confluence_sprint_page_id
+                )
+            except Exception:
+                logger.exception("컨플루언스 일정 조회 실패")
+
+        return render_template(
+            "partials/dashboard.html",
+            report=report,
+            schedule=schedule,
+        )
+
     @app.route("/api/report")
     def api_report():
         """스프린트 리포트 JSON API."""

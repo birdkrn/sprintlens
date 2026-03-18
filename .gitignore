@@ -30,6 +30,9 @@ dist/
 *.sqlite
 *.sqlite3
 
+# Node
+node_modules/
+
 # Ruff cache
 .ruff_cache/
 

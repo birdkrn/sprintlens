@@ -20,9 +20,10 @@
 ## 기술 스택
 - **언어:** `Python 3.13 / Flask`
 - **개발 환경:** `macOS / Windows`
+- **프론트엔드:** `Tailwind CSS` + `DaisyUI` (실시간 컴파일), `HTMX` (동적 로딩)
 - **테스트 프레임워크:** `pytest`
 - **린터/포매터:** `Ruff`
-- **패키지 관리:** `pyproject.toml` (PEP 621)
+- **패키지 관리:** `pyproject.toml` (PEP 621), `package.json` (프론트엔드)
 - Jira & Confluence (사내 구축, atlassian-python-api)
 - Slack Bot (보조 기능)
 - Docker 배포
@@ -99,18 +100,27 @@
 
 ## 프로젝트 구조
 ```
-sprintlens/          # 메인 패키지
-  config.py          # 환경 변수 기반 설정
-  logging_config.py  # 로깅 설정
-  jira_service.py    # Jira API 클라이언트
+sprintlens/              # 메인 패키지
+  config.py              # 환경 변수 기반 설정
+  logging_config.py      # 로깅 설정
+  jira_service.py        # Jira API 클라이언트
   confluence_service.py  # Confluence API 클라이언트
-  slack_service.py   # Slack 메시지 발송
-  report_service.py  # 리포트 생성 로직
-  scheduler.py       # 슬랙 리포트 스케줄러
-templates/           # Flask HTML 템플릿
-static/              # CSS, JS 정적 파일
-tests/               # 테스트 코드
-app.py               # Flask 애플리케이션 엔트리 포인트
+  slack_service.py       # Slack 메시지 발송
+  report_service.py      # 리포트 생성 로직
+  scheduler.py           # 슬랙 리포트 스케줄러
+templates/               # Flask HTML 템플릿
+  base.html              # 공통 레이아웃 (Navbar, HTMX, Tailwind)
+  index.html             # 메인 페이지
+  partials/              # HTMX 파셜 템플릿
+    dashboard.html       # 대시보드 콘텐츠 (벤토 그리드)
+static/
+  src/input.css          # Tailwind 입력 CSS
+  css/style.css          # 빌드된 CSS (git 추적)
+  vendor/htmx.min.js     # HTMX 라이브러리
+tests/                   # 테스트 코드
+app.py                   # Flask 애플리케이션 엔트리 포인트
+tailwind.config.js       # Tailwind + DaisyUI 설정
+package.json             # 프론트엔드 의존성
 ```
 
 
@@ -131,11 +141,22 @@ source .venv/bin/activate
 ### 의존성 설치
 ```bash
 pip install -e ".[dev]"
+npm install
 ```
 
 ### 앱 실행
 ```bash
-python app.py
+# 개발 모드 (Tailwind watch + Flask 동시 실행)
+npm run dev
+
+# 또는 개별 실행
+npm run css:watch    # 터미널 1: Tailwind 실시간 컴파일
+python app.py        # 터미널 2: Flask 서버
+```
+
+### CSS 빌드
+```bash
+npm run css:build    # 프로덕션 빌드 (minified)
 ```
 
 ### 테스트
