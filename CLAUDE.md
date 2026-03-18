@@ -20,7 +20,6 @@
 ## 기술 스택
 - **언어:** `Python 3.13 / Flask`
 - **개발 환경:** `macOS / Windows`
-- **AI 모델:** `Google Gemini` (`google-genai` SDK) , `Claude Code` (`claude-api` SDK)
 - **테스트 프레임워크:** `pytest`
 - **린터/포매터:** `Ruff`
 - **패키지 관리:** `pyproject.toml` (PEP 621)
@@ -28,7 +27,7 @@
 - Slack Bot (보조 기능)
 - Docker 배포
 
-## Development Principles
+## 개발 원칙 (Development Principles)
 이 프로젝트는 다음 원칙을 따릅니다:
 
 ### 핵심 개발 원칙
@@ -52,7 +51,7 @@
  - 방법을 작게 유지하고 단일 책임에 집중하세요.
  - 상태 및 부작용 최소화
  - 가능한 가장 간단한 솔루션을 사용하세요.
- - 다음 설계 윈칙 준수 : DRY(Don't Repeat Yourself), SRP(Single Responsibility Principle), OCP(Open/Closed Principle), LSP(Liskov Substitution Principle), ISP(Interface Segregation Principle), DIP(Dependency Inversion Principle)
+ - 다음 설계 원칙 준수 : DRY(Don't Repeat Yourself), SRP(Single Responsibility Principle), OCP(Open/Closed Principle), LSP(Liskov Substitution Principle), ISP(Interface Segregation Principle), DIP(Dependency Inversion Principle)
 
 ### 좋은 코드를 위한 지침
  - 좋은 코드를 만들기 위해 최대한 노력하세요.
@@ -154,5 +153,7 @@ ruff format --check .       # 포매팅 검사만
 
 
 ### Docker 배포
+```bash
 docker-compose up --build
+```
 
