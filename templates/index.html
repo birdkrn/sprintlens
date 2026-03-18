@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SprintLens - 스프린트 현황</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SprintLens</h1>
+            <p class="subtitle">스프린트 진행상황 리포트</p>
+        </header>
+
+        {% if report %}
+        <section class="sprint-summary">
+            <h2>{{ report.sprint.name }}</h2>
+            {% if report.sprint.start_date and report.sprint.end_date %}
+            <p class="date-range">{{ report.sprint.start_date[:10] }} ~ {{ report.sprint.end_date[:10] }}</p>
+            {% endif %}
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ report.progress_percent }}%"></div>
+                <span class="progress-text">{{ report.done_count }}/{{ report.total_issues }} ({{ "%.0f"|format(report.progress_percent) }}%)</span>
+            </div>
+        </section>
+
+        <section class="report-section">
+            <h3>담당자별 현황</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>담당자</th>
+                        <th>전체</th>
+                        <th>완료</th>
+                        <th>진행중</th>
+                        <th>대기</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ar in report.by_assignee %}
+                    <tr>
+                        <td>{{ ar.name }}</td>
+                        <td>{{ ar.total }}</td>
+                        <td>{{ ar.done_count }}</td>
+                        <td>{{ ar.in_progress_count }}</td>
+                        <td>{{ ar.todo_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="report-section">
+            <h3>스토리별 현황</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>스토리</th>
+                        <th>요약</th>
+                        <th>전체</th>
+                        <th>완료</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sr in report.by_story %}
+                    <tr>
+                        <td>{{ sr.story_key }}</td>
+                        <td>{{ sr.story_summary }}</td>
+                        <td>{{ sr.total }}</td>
+                        <td>{{ sr.done_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        {% if schedule %}
+        <section class="report-section">
+            <h3>스프린트 일정 (Confluence)</h3>
+            <div class="confluence-content">
+                {{ schedule.content_html | safe }}
+            </div>
+        </section>
+        {% endif %}
+
+        {% else %}
+        <section class="no-data">
+            <p>현재 활성 스프린트가 없습니다.</p>
+        </section>
+        {% endif %}
+    </div>
+
+    <script>
+        // 5분마다 자동 새로고침
+        setTimeout(() => location.reload(), 5 * 60 * 1000);
+    </script>
+</body>
+</html>

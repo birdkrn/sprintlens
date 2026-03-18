@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+.venv/
+venv/
+
+# Environment Variables
+.env
+
+# Test Coverage
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+build/
+dist/
+*.tar
+*.tar.gz
+*.egg-info/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Ruff cache
+.ruff_cache/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
