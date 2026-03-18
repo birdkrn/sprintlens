@@ -21,23 +21,31 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = config.flask_secret_key
 
-    # 서비스 초기화
-    jira_service = JiraService(
-        base_url=config.jira_base_url,
-        username=config.jira_username,
-        api_token=config.jira_api_token,
-        board_id=config.jira_board_id,
-    )
-    confluence_service = ConfluenceService(
-        base_url=config.confluence_base_url,
-        username=config.confluence_username,
-        api_token=config.confluence_api_token,
-    )
-    report_service = ReportService(jira_service=jira_service)
+    # 서비스 초기화 (설정이 유효한 경우에만)
+    jira_service: JiraService | None = None
+    confluence_service: ConfluenceService | None = None
+    report_service: ReportService | None = None
+
+    config_errors = config.validate()
+    if config_errors:
+        logger.warning("설정 누락으로 서비스 미초기화: %s", ", ".join(config_errors))
+    else:
+        jira_service = JiraService(
+            base_url=config.jira_base_url,
+            username=config.jira_username,
+            api_token=config.jira_api_token,
+            board_id=config.jira_board_id,
+        )
+        confluence_service = ConfluenceService(
+            base_url=config.confluence_base_url,
+            username=config.confluence_username,
+            api_token=config.confluence_api_token,
+        )
+        report_service = ReportService(jira_service=jira_service)
 
     # 슬랙 스케줄러 (활성화된 경우)
     scheduler: ReportScheduler | None = None
-    if config.slack_report_enabled:
+    if config.slack_report_enabled and report_service:
         slack_errors = config.validate_slack()
         if slack_errors:
             logger.error("슬랙 설정 누락: %s", ", ".join(slack_errors))
@@ -61,9 +69,16 @@ def create_app() -> Flask:
     @app.route("/")
     def index():
         """스프린트 리포트 메인 페이지."""
-        report = report_service.generate_sprint_report()
+        report = None
         schedule = None
-        if config.confluence_sprint_page_id:
+
+        if report_service:
+            try:
+                report = report_service.generate_sprint_report()
+            except Exception:
+                logger.exception("스프린트 리포트 생성 실패")
+
+        if confluence_service and config.confluence_sprint_page_id:
             try:
                 schedule = confluence_service.get_sprint_schedule(
                     config.confluence_sprint_page_id
@@ -80,6 +95,9 @@ def create_app() -> Flask:
     @app.route("/api/report")
     def api_report():
         """스프린트 리포트 JSON API."""
+        if not report_service:
+            return {"error": "Jira 설정이 되어 있지 않습니다."}, 503
+
         report = report_service.generate_sprint_report()
         if not report:
             return {"error": "활성 스프린트가 없습니다."}, 404
