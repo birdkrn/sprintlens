@@ -158,12 +158,10 @@ def create_app() -> Flask:
 
     @app.route("/dashboard")
     def dashboard():
-        """대시보드 페이지 (풀 페이지)."""
-        report = _build_dashboard_report()
+        """대시보드 페이지 (로딩 화면 먼저 표시)."""
         return render_template(
             "index.html",
-            active_partial="partials/dashboard.html",
-            report=report,
+            active_partial="partials/dashboard_loading.html",
             config=config,
         )
 
@@ -187,7 +185,14 @@ def create_app() -> Flask:
 
     @app.route("/partials/dashboard")
     def partials_dashboard():
-        """HTMX 파셜: 대시보드."""
+        """HTMX 파셜: 대시보드 (로딩 화면)."""
+        return render_template(
+            "partials/dashboard_loading.html", config=config
+        )
+
+    @app.route("/partials/dashboard/data")
+    def partials_dashboard_data():
+        """HTMX 파셜: 대시보드 데이터 (비동기 로드)."""
         report = _build_dashboard_report()
         return render_template(
             "partials/dashboard.html",
