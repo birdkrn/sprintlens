@@ -9,6 +9,7 @@ from sprintlens.confluence_service import ConfluenceService
 from sprintlens.jira_service import JiraService
 from sprintlens.logging_config import get_logger, setup_logging
 from sprintlens.report_service import ReportService
+from sprintlens.schedule_parser import parse_schedule_html
 from sprintlens.scheduler import ReportScheduler
 from sprintlens.slack_service import SlackService
 
@@ -149,9 +150,11 @@ def create_app() -> Flask:
     @app.route("/schedule")
     def schedule():
         """프로그램팀 일정 페이지 (풀 페이지)."""
+        sprint_schedule = _build_schedule()
         return render_template(
             "index.html",
             active_partial="partials/schedule.html",
+            schedule=sprint_schedule,
             config=config,
         )
 
@@ -177,11 +180,29 @@ def create_app() -> Flask:
     @app.route("/partials/schedule")
     def partials_schedule():
         """HTMX 파셜: 프로그램팀 일정."""
-        return render_template("partials/schedule.html", config=config)
+        sprint_schedule = _build_schedule()
+        return render_template(
+            "partials/schedule.html",
+            schedule=sprint_schedule,
+            config=config,
+        )
 
     # ------------------------------------------------------------------
     # 헬퍼
     # ------------------------------------------------------------------
+
+    def _build_schedule():
+        """Confluence에서 스프린트 일정을 가져와 파싱한다."""
+        if not confluence_service or not config.confluence_sprint_page_id:
+            return None
+        try:
+            page = confluence_service.get_page(
+                config.confluence_sprint_page_id
+            )
+            return parse_schedule_html(page.title, page.body_html)
+        except Exception:
+            logger.exception("스프린트 일정 조회 실패")
+            return None
 
     def _build_dashboard_report():
         """대시보드용 스프린트 리포트를 생성한다."""

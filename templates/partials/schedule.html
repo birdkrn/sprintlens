@@ -1,4 +1,96 @@
-<!-- 프로그램팀 일정 -->
+{% if schedule %}
+
+<!-- 헤더 -->
+<div class="mb-6">
+    <h2 class="text-2xl font-bold">{{ schedule.title }}</h2>
+    {% if schedule.period %}
+    <p class="text-sm text-base-content/60 mt-1">{{ schedule.period }}</p>
+    {% endif %}
+</div>
+
+<!-- 개요 Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    {% if schedule.work_days %}
+    <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
+        <div class="stat-title">작업일</div>
+        <div class="stat-value text-primary text-2xl">{{ schedule.work_days }}</div>
+    </div>
+    {% endif %}
+    {% if schedule.members %}
+    <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
+        <div class="stat-title">인원</div>
+        <div class="stat-value text-2xl">{{ schedule.members }}</div>
+    </div>
+    {% endif %}
+    <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
+        <div class="stat-title">총 추정일</div>
+        <div class="stat-value text-info text-2xl">{{ "%.1f"|format(schedule.total_estimate) }}일</div>
+    </div>
+    {% if schedule.target_velocity %}
+    <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
+        <div class="stat-title">목표 속도</div>
+        <div class="stat-value text-2xl">{{ schedule.target_velocity }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 담당자 요약 -->
+{% if schedule.all_assignees %}
+<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
+    <h3 class="text-sm font-semibold mb-3 text-base-content/70">담당자</h3>
+    <div class="flex flex-wrap gap-2">
+        {% for name in schedule.all_assignees %}
+        <span class="badge badge-outline">{{ name }}</span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 섹션별 일정 -->
+{% for section in schedule.sections %}
+<div class="mb-6">
+    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+        {{ section.name }}
+    </h3>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {% for cat in section.categories %}
+        <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="font-semibold">{{ cat.name }}</h4>
+                <span class="badge badge-sm badge-outline">{{ "%.1f"|format(cat.total_estimate) }}일</span>
+            </div>
+            <div class="space-y-2">
+                {% for task in cat.tasks %}
+                <div class="flex items-start gap-2 text-sm">
+                    <span class="badge badge-ghost badge-xs mt-1 shrink-0">{{ task.estimate_days }}d</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="truncate">{{ task.title }}</span>
+                            {% if task.assignee %}
+                            <span class="badge badge-primary badge-xs shrink-0">{{ task.assignee }}</span>
+                            {% endif %}
+                        </div>
+                        {% if task.sub_items %}
+                        <ul class="mt-1 ml-3 text-xs text-base-content/60 list-disc">
+                            {% for sub in task.sub_items %}
+                            <li>{{ sub }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+
+<!-- 데이터 없음 -->
 <div class="mb-6">
     <h2 class="text-2xl font-bold">프로그램팀 일정</h2>
     <p class="text-sm text-base-content/60 mt-1">스프린트 및 마일스톤 일정을 관리합니다</p>
@@ -7,9 +99,14 @@
 <div class="flex items-center justify-center min-h-[50vh]">
     <div class="text-center">
         <div class="text-5xl mb-4 opacity-20">📅</div>
-        <h3 class="text-lg font-semibold mb-2">준비 중</h3>
+        <h3 class="text-lg font-semibold mb-2">데이터 없음</h3>
         <p class="text-base-content/60 text-sm">
-            프로그램팀 일정 기능이 곧 추가됩니다.
+            Confluence 연동 설정이 필요하거나 일정 페이지를 찾을 수 없습니다.
+        </p>
+        <p class="text-sm text-base-content/40 mt-2">
+            <code>.env</code> 파일에서 <code>CONFLUENCE_SPRINT_PAGE_ID</code>를 설정해주세요.
         </p>
     </div>
 </div>
+
+{% endif %}
