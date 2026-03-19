@@ -1,6 +1,8 @@
 """SprintLens - 스프린트 진행상황 리포트 웹 서비스."""
 
-from flask import Flask, render_template
+from dataclasses import dataclass
+
+from flask import Flask, render_template, request
 
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
@@ -72,6 +74,50 @@ def create_app() -> Flask:
     app.config["report_service"] = report_service
     app.config["confluence_service"] = confluence_service
     app.config["app_config"] = config
+
+    # ------------------------------------------------------------------
+    # 메뉴 시스템
+    # ------------------------------------------------------------------
+
+    @dataclass
+    class MenuItem:
+        """네비게이션 메뉴 항목."""
+
+        id: str
+        label: str
+        url: str
+        partial_url: str
+
+    menu_items = [
+        MenuItem(
+            id="dashboard",
+            label="대시보드",
+            url="/",
+            partial_url="/partials/dashboard",
+        ),
+    ]
+
+    @app.context_processor
+    def inject_menu():
+        """모든 템플릿에 메뉴 데이터를 주입한다."""
+        active = "dashboard"
+        for item in menu_items:
+            if request.path == item.url:
+                active = item.id
+                break
+
+        active_item = next(
+            (m for m in menu_items if m.id == active), menu_items[0]
+        )
+        return {
+            "menu_items": menu_items,
+            "active_menu": active,
+            "current_partial_url": active_item.partial_url,
+        }
+
+    # ------------------------------------------------------------------
+    # 라우트
+    # ------------------------------------------------------------------
 
     @app.route("/")
     def index():

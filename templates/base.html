@@ -10,14 +10,30 @@
 <body class="bg-base-200 min-h-screen">
     <!-- Navbar -->
     <div class="navbar bg-base-100 border-b border-base-300 px-6">
-        <div class="flex-1">
+        <div class="flex-1 gap-6">
             <span class="text-xl font-bold tracking-tight">SprintLens</span>
+            <!-- Top Menu -->
+            <nav id="top-menu" class="flex gap-1">
+                {% for item in menu_items %}
+                <button
+                    class="btn btn-ghost btn-sm{% if item.id == active_menu %} btn-active{% endif %}"
+                    hx-get="{{ item.partial_url }}"
+                    hx-target="#main-content"
+                    hx-indicator="#loading-indicator"
+                    hx-push-url="{{ item.url }}"
+                    hx-on::after-request="
+                        document.querySelectorAll('#top-menu button').forEach(b => b.classList.remove('btn-active'));
+                        this.classList.add('btn-active');
+                    "
+                >{{ item.label }}</button>
+                {% endfor %}
+            </nav>
         </div>
         <div class="flex-none gap-2">
             <button
                 class="btn btn-ghost btn-sm"
-                hx-get="/partials/dashboard"
-                hx-target="#dashboard-content"
+                hx-get="{{ current_partial_url|default('/partials/dashboard') }}"
+                hx-target="#main-content"
                 hx-indicator="#loading-indicator"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
