@@ -28,6 +28,39 @@
 - Slack Bot (보조 기능)
 - Docker 배포
 
+## Jira 시스템 정보
+
+### 기본 정보
+- **설치 유형:** 온프레미스 (Jira Server), 사내 네트워크 전용
+- **Jira Server 버전:** `v8.5.7`
+- **관리자 권한:** 없음 (프로젝트 수준 접근만 가능)
+
+### 프로젝트 정보
+- **프로젝트 키:** `G2M`
+- **Agile 보드 ID:** `658` (스크럼/칸반 보드)
+
+### URL 및 API 엔드포인트
+- **Jira 베이스 URL:** `https://jira.line.games`
+- **프로젝트 보드:** `https://jira.line.games/secure/RapidBoard.jspa?rapidView=658&projectKey=G2M`
+- **REST API (v2):** `https://jira.line.games/rest/api/2/`
+- **Agile REST API:** `https://jira.line.games/rest/agile/1.0/`
+
+### API 사용 시 주의사항
+- Jira Server v8.5.7은 **REST API v2**를 사용 (Jira Cloud API v3과 다름)
+- `atlassian-python-api` 라이브러리 사용 시 Cloud 모드가 아닌 **Server 모드**로 설정 필요
+- 사내 네트워크에서만 접근 가능하므로 VPN 또는 사내 환경 필요
+- 인증: 환경 변수(`JIRA_URL`, `JIRA_USERNAME`, `JIRA_PASSWORD` 또는 `JIRA_TOKEN`)로 관리
+- 관리자 API(`/rest/api/2/configuration`, 스킴 변경 등)는 사용 불가
+
+### 주요 API 경로 참고
+| 용도 | 엔드포인트 |
+|------|-----------|
+| 프로젝트 정보 | `GET /rest/api/2/project/G2M` |
+| 보드의 스프린트 목록 | `GET /rest/agile/1.0/board/658/sprint` |
+| 스프린트 이슈 조회 | `GET /rest/agile/1.0/sprint/{sprintId}/issue` |
+| JQL 검색 | `POST /rest/api/2/search` |
+| 이슈 상세 | `GET /rest/api/2/issue/{issueKey}` |
+
 ## 디자인 스타일
 
 - **컨셉:** Modern SaaS Dashboard
