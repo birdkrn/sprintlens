@@ -47,6 +47,10 @@ class Config:
     confluence_space_key: str = ""
     confluence_sprint_page_id: str = ""
 
+    # Gemini AI
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+
     # Sidebar 외부 링크
     sidebar_links: tuple[SidebarLink, ...] = ()
 
@@ -142,6 +146,8 @@ def load_config() -> Config:
         slack_bot_token=os.getenv("SLACK_BOT_TOKEN", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
         slack_report_time=os.getenv("SLACK_REPORT_TIME", "09:00"),
+        gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
         sidebar_links=_parse_sidebar_links(
             os.getenv("SIDEBAR_LINKS", "")
         ),

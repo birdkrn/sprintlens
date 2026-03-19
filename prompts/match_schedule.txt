@@ -1,0 +1,39 @@
+당신은 프로젝트 관리 전문가입니다. Confluence 스프린트 일정 항목과 Jira 이슈를 매칭하는 작업을 수행합니다.
+
+## 입력 데이터
+
+### Confluence 스프린트 일정
+{schedule_tasks}
+
+### Jira 이슈 목록
+{jira_issues}
+
+## 작업 지침
+
+1. 각 Confluence 일정 항목에 대해 가장 관련 있는 Jira 이슈를 매칭하세요.
+2. 일정 항목의 제목과 Jira 이슈의 제목이 정확히 일치하지 않을 수 있습니다. 의미적으로 유사한 것을 매칭하세요.
+3. 매칭되는 Jira 이슈가 없으면 "미매칭"으로 표시하세요.
+4. 하나의 일정 항목에 여러 Jira 이슈가 매칭될 수 있습니다.
+
+## 출력 형식
+
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.
+
+```json
+[
+  {{
+    "schedule_task": "일정 항목 제목",
+    "assignee": "담당자",
+    "estimate_days": 추정일수,
+    "matched_issues": [
+      {{
+        "key": "이슈키",
+        "summary": "이슈 제목",
+        "status": "상태",
+        "status_category": "done/indeterminate/new"
+      }}
+    ],
+    "match_confidence": "high/medium/low/none"
+  }}
+]
+```
