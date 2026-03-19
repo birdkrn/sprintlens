@@ -28,6 +28,7 @@ class IssueInfo:
     key: str
     summary: str
     status: str
+    status_category: str = ""  # "done", "indeterminate", "new"
     assignee: str | None = None
     story_key: str | None = None
     story_summary: str | None = None
@@ -120,9 +121,24 @@ class JiraService:
     # ------------------------------------------------------------------
 
     def get_sprint_issues(self, sprint_id: int) -> list[IssueInfo]:
-        """스프린트에 포함된 이슈 목록을 반환한다."""
-        issues = self._jira.get_sprint_issues(sprint_id, start=0, limit=200)
-        result = self._parse_issues(issues.get("issues", []))
+        """스프린트에 포함된 이슈 목록을 반환한다 (전체 페이지네이션)."""
+        all_issues: list[dict] = []
+        start_at = 0
+        page_size = 200
+
+        while True:
+            data = self._jira.get_sprint_issues(
+                sprint_id, start=start_at, limit=page_size
+            )
+            issues = data.get("issues", [])
+            all_issues.extend(issues)
+
+            total = data.get("total", 0)
+            if len(all_issues) >= total or not issues:
+                break
+            start_at = len(all_issues)
+
+        result = self._parse_issues(all_issues)
         logger.info("스프린트 이슈 %d건 조회 완료", len(result))
         return result
 
@@ -174,11 +190,14 @@ class JiraService:
         fields = issue["fields"]
         assignee = fields.get("assignee")
         parent = fields.get("parent")
+        status = fields["status"]
+        status_category = status.get("statusCategory", {}).get("key", "")
 
         return IssueInfo(
             key=issue["key"],
             summary=fields.get("summary", ""),
-            status=fields["status"]["name"],
+            status=status["name"],
+            status_category=status_category,
             assignee=assignee["displayName"] if assignee else None,
             story_key=parent["key"] if parent else None,
             story_summary=(

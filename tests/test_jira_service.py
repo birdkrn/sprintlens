@@ -67,7 +67,10 @@ ISSUE_WITH_PARENT = {
     "key": "G2M-101",
     "fields": {
         "summary": "로그인 기능 구현",
-        "status": {"name": "진행 중"},
+        "status": {
+            "name": "진행 중",
+            "statusCategory": {"key": "indeterminate"},
+        },
         "assignee": {"displayName": "홍길동"},
         "parent": {
             "key": "G2M-100",
@@ -81,7 +84,10 @@ ISSUE_WITHOUT_PARENT = {
     "key": "G2M-102",
     "fields": {
         "summary": "API 문서 작성",
-        "status": {"name": "완료"},
+        "status": {
+            "name": "완료",
+            "statusCategory": {"key": "done"},
+        },
         "assignee": None,
         "parent": None,
         "issuetype": {"name": "작업"},

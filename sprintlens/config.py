@@ -39,7 +39,11 @@ class Config:
     slack_report_enabled: bool = False
 
     def validate(self) -> list[str]:
-        """필수 설정값 검증. 누락된 항목 목록을 반환한다."""
+        """전체 필수 설정값 검증. 누락된 항목 목록을 반환한다."""
+        return self.validate_jira() + self.validate_confluence()
+
+    def validate_jira(self) -> list[str]:
+        """Jira 관련 필수 설정값 검증."""
         errors: list[str] = []
         if not self.jira_base_url:
             errors.append("JIRA_BASE_URL")
@@ -51,6 +55,11 @@ class Config:
             errors.append("JIRA_BOARD_ID")
         if not self.jira_project_key:
             errors.append("JIRA_PROJECT_KEY")
+        return errors
+
+    def validate_confluence(self) -> list[str]:
+        """Confluence 관련 필수 설정값 검증."""
+        errors: list[str] = []
         if not self.confluence_base_url:
             errors.append("CONFLUENCE_BASE_URL")
         if not self.confluence_username:

@@ -26,9 +26,9 @@ def create_app() -> Flask:
     confluence_service: ConfluenceService | None = None
     report_service: ReportService | None = None
 
-    config_errors = config.validate()
-    if config_errors:
-        logger.warning("설정 누락으로 서비스 미초기화: %s", ", ".join(config_errors))
+    jira_errors = config.validate_jira()
+    if jira_errors:
+        logger.warning("Jira 설정 누락: %s", ", ".join(jira_errors))
     else:
         jira_service = JiraService(
             base_url=config.jira_base_url,
@@ -36,12 +36,19 @@ def create_app() -> Flask:
             password=config.jira_password,
             board_id=config.jira_board_id,
         )
+        report_service = ReportService(jira_service=jira_service)
+
+    confluence_errors = config.validate_confluence()
+    if confluence_errors:
+        logger.warning(
+            "Confluence 설정 누락: %s", ", ".join(confluence_errors)
+        )
+    else:
         confluence_service = ConfluenceService(
             base_url=config.confluence_base_url,
             username=config.confluence_username,
             api_token=config.confluence_api_token,
         )
-        report_service = ReportService(jira_service=jira_service)
 
     # 슬랙 스케줄러 (활성화된 경우)
     scheduler: ReportScheduler | None = None
@@ -90,6 +97,7 @@ def create_app() -> Flask:
             "index.html",
             report=report,
             schedule=schedule,
+            config=config,
         )
 
     @app.route("/partials/dashboard")
@@ -116,6 +124,7 @@ def create_app() -> Flask:
             "partials/dashboard.html",
             report=report,
             schedule=schedule,
+            config=config,
         )
 
     @app.route("/api/report")

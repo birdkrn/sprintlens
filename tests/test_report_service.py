@@ -12,19 +12,22 @@ class TestReportService:
     def _make_issues(self) -> list[IssueInfo]:
         return [
             IssueInfo(
-                key="TEST-1", summary="작업1", status="Done",
-                assignee="김철수", story_key="TEST-100",
-                story_summary="스토리A", issue_type="Task",
+                key="TEST-1", summary="작업1", status="해결됨",
+                status_category="done", assignee="김철수",
+                story_key="TEST-100", story_summary="스토리A",
+                issue_type="작업",
             ),
             IssueInfo(
-                key="TEST-2", summary="작업2", status="In Progress",
-                assignee="김철수", story_key="TEST-100",
-                story_summary="스토리A", issue_type="Task",
+                key="TEST-2", summary="작업2", status="작업 중",
+                status_category="indeterminate", assignee="김철수",
+                story_key="TEST-100", story_summary="스토리A",
+                issue_type="작업",
             ),
             IssueInfo(
-                key="TEST-3", summary="작업3", status="To Do",
-                assignee="이영희", story_key="TEST-101",
-                story_summary="스토리B", issue_type="Task",
+                key="TEST-3", summary="작업3", status="열림",
+                status_category="new", assignee="이영희",
+                story_key="TEST-101", story_summary="스토리B",
+                issue_type="작업",
             ),
         ]
 

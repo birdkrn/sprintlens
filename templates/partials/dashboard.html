@@ -112,6 +112,64 @@
 
 </div>
 
+<!-- 일감 리스트 -->
+<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">일감 리스트</h3>
+        <span class="badge badge-outline badge-sm">{{ report.total_issues }}건</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th class="w-28">이슈 ID</th>
+                    <th>유형</th>
+                    <th>제목</th>
+                    <th>상태</th>
+                    <th>담당자</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in report.issues %}
+                <tr class="hover">
+                    <td>
+                        <a
+                            href="{{ config.jira_base_url }}/browse/{{ issue.key }}"
+                            target="_blank"
+                            class="link link-primary font-mono text-xs"
+                        >{{ issue.key }}</a>
+                    </td>
+                    <td>
+                        {% if issue.issue_type == '부작업' %}
+                        <span class="badge badge-ghost badge-xs">부작업</span>
+                        {% elif issue.issue_type == '작업' %}
+                        <span class="badge badge-outline badge-xs">작업</span>
+                        {% elif issue.issue_type == '큰틀' %}
+                        <span class="badge badge-primary badge-xs">큰틀</span>
+                        {% else %}
+                        <span class="badge badge-ghost badge-xs">{{ issue.issue_type }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="max-w-md truncate" title="{{ issue.summary }}">
+                        {{ issue.summary }}
+                    </td>
+                    <td>
+                        {% if issue.status_category == 'done' %}
+                        <span class="badge badge-success badge-sm gap-1">{{ issue.status }}</span>
+                        {% elif issue.status_category == 'indeterminate' %}
+                        <span class="badge badge-info badge-sm gap-1">{{ issue.status }}</span>
+                        {% else %}
+                        <span class="badge badge-ghost badge-sm gap-1">{{ issue.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ issue.assignee or '미배정' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Confluence 일정 -->
 {% if schedule %}
 <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5">

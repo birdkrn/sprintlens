@@ -21,11 +21,13 @@ class AssigneeReport:
 
     @property
     def done_count(self) -> int:
-        return sum(1 for i in self.issues if i.status == "Done")
+        return sum(1 for i in self.issues if i.status_category == "done")
 
     @property
     def in_progress_count(self) -> int:
-        return sum(1 for i in self.issues if i.status == "In Progress")
+        return sum(
+            1 for i in self.issues if i.status_category == "indeterminate"
+        )
 
     @property
     def todo_count(self) -> int:
@@ -46,7 +48,7 @@ class StoryReport:
 
     @property
     def done_count(self) -> int:
-        return sum(1 for i in self.issues if i.status == "Done")
+        return sum(1 for i in self.issues if i.status_category == "done")
 
 
 @dataclass
@@ -64,7 +66,7 @@ class SprintReport:
 
     @property
     def done_count(self) -> int:
-        return sum(1 for i in self.issues if i.status == "Done")
+        return sum(1 for i in self.issues if i.status_category == "done")
 
     @property
     def progress_percent(self) -> float:
