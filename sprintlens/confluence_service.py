@@ -22,10 +22,10 @@ class ConfluenceService:
     """Confluence API 클라이언트."""
 
     def __init__(
-        self, base_url: str, username: str, api_token: str
+        self, base_url: str, username: str, password: str
     ) -> None:
         self._confluence = Confluence(
-            url=base_url, username=username, password=api_token
+            url=base_url, username=username, password=password
         )
 
     def get_sprint_schedule(self, page_id: str) -> SprintSchedule:

@@ -27,7 +27,8 @@ class TestConfig:
             jira_project_key="TEST",
             confluence_base_url="https://confluence.test.com",
             confluence_username="user",
-            confluence_api_token="token",
+            confluence_password="password",
+            confluence_space_key="TR",
             confluence_sprint_page_id="12345",
         )
         assert config.validate() == []

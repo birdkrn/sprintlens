@@ -43,7 +43,8 @@ class Config:
     # Confluence
     confluence_base_url: str = ""
     confluence_username: str = ""
-    confluence_api_token: str = ""
+    confluence_password: str = ""
+    confluence_space_key: str = ""
     confluence_sprint_page_id: str = ""
 
     # Sidebar 외부 링크
@@ -81,8 +82,10 @@ class Config:
             errors.append("CONFLUENCE_BASE_URL")
         if not self.confluence_username:
             errors.append("CONFLUENCE_USERNAME")
-        if not self.confluence_api_token:
-            errors.append("CONFLUENCE_API_TOKEN")
+        if not self.confluence_password:
+            errors.append("CONFLUENCE_PASSWORD")
+        if not self.confluence_space_key:
+            errors.append("CONFLUENCE_SPACE_KEY")
         if not self.confluence_sprint_page_id:
             errors.append("CONFLUENCE_SPRINT_PAGE_ID")
         return errors
@@ -133,7 +136,8 @@ def load_config() -> Config:
         jira_project_key=os.getenv("JIRA_PROJECT_KEY", ""),
         confluence_base_url=os.getenv("CONFLUENCE_BASE_URL", ""),
         confluence_username=os.getenv("CONFLUENCE_USERNAME", ""),
-        confluence_api_token=os.getenv("CONFLUENCE_API_TOKEN", ""),
+        confluence_password=os.getenv("CONFLUENCE_PASSWORD", ""),
+        confluence_space_key=os.getenv("CONFLUENCE_SPACE_KEY", ""),
         confluence_sprint_page_id=os.getenv("CONFLUENCE_SPRINT_PAGE_ID", ""),
         slack_bot_token=os.getenv("SLACK_BOT_TOKEN", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),

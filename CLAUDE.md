@@ -62,6 +62,35 @@
 | JQL 검색 | `POST /rest/api/2/search` |
 | 이슈 상세 | `GET /rest/api/2/issue/{issueKey}` |
 
+## Confluence 시스템 정보
+
+### 기본 정보
+- **설치 유형:** 온프레미스 (Confluence Server), 사내 네트워크 전용
+- **Confluence Server 버전:** `v7.4.3`
+- **관리자 권한:** 없음
+
+### 프로젝트 정보
+- **스페이스 키:** `TR`
+
+### URL 및 API 엔드포인트
+- **Confluence 베이스 URL:** `https://wiki.line.games`
+- **REST API:** `https://wiki.line.games/rest/api/`
+
+### API 사용 시 주의사항
+- Confluence Server v7.4.3은 **REST API v1**을 사용 (Cloud API와 다름)
+- `atlassian-python-api` 라이브러리 사용 시 **Server 모드**로 설정 필요
+- 사내 네트워크에서만 접근 가능
+- 인증: **Basic Auth (ID/Password)** 방식 사용 (Jira와 동일 계정)
+- 환경 변수: `CONFLUENCE_BASE_URL`, `CONFLUENCE_USERNAME`, `CONFLUENCE_PASSWORD`, `CONFLUENCE_SPACE_KEY`
+
+### 주요 API 경로 참고
+| 용도 | 엔드포인트 |
+|------|-----------|
+| 스페이스 정보 | `GET /rest/api/space/TR` |
+| 페이지 조회 (ID) | `GET /rest/api/content/{pageId}?expand=body.storage` |
+| 페이지 검색 (CQL) | `GET /rest/api/content/search?cql=...` |
+| 자식 페이지 목록 | `GET /rest/api/content/{pageId}/child/page` |
+
 ## 디자인 스타일
 
 > **상세 레이아웃 명세:** [`docs/layout-guide.md`](docs/layout-guide.md) 참조

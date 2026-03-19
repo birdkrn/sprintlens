@@ -49,7 +49,7 @@ def create_app() -> Flask:
         confluence_service = ConfluenceService(
             base_url=config.confluence_base_url,
             username=config.confluence_username,
-            api_token=config.confluence_api_token,
+            password=config.confluence_password,
         )
 
     # 슬랙 스케줄러 (활성화된 경우)
