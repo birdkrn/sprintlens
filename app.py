@@ -169,12 +169,10 @@ def create_app() -> Flask:
 
     @app.route("/schedule")
     def schedule():
-        """프로그램팀 일정 페이지 (풀 페이지)."""
-        sprint_schedule = _build_schedule()
+        """프로그램팀 일정 페이지 (로딩 화면 먼저 표시)."""
         return render_template(
             "index.html",
-            active_partial="partials/schedule.html",
-            schedule=sprint_schedule,
+            active_partial="partials/schedule_loading.html",
             config=config,
         )
 
@@ -199,7 +197,14 @@ def create_app() -> Flask:
 
     @app.route("/partials/schedule")
     def partials_schedule():
-        """HTMX 파셜: 프로그램팀 일정."""
+        """HTMX 파셜: 프로그램팀 일정 (로딩 화면)."""
+        return render_template(
+            "partials/schedule_loading.html", config=config
+        )
+
+    @app.route("/partials/schedule/data")
+    def partials_schedule_data():
+        """HTMX 파셜: 프로그램팀 일정 데이터 (비동기 로드)."""
         sprint_schedule = _build_schedule()
         return render_template(
             "partials/schedule.html",
@@ -226,6 +231,12 @@ def create_app() -> Flask:
                 sprint = jira_service.get_active_sprint()
                 if sprint:
                     issues = jira_service.get_sprint_issues(sprint.id)
+                    # 프로그램팀 멤버 이슈만 필터링
+                    if config.program_team_members:
+                        members = set(config.program_team_members)
+                        issues = [
+                            i for i in issues if i.assignee in members
+                        ]
                     schedule_matcher.match(schedule, issues)
 
             return schedule

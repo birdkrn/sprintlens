@@ -1,0 +1,64 @@
+<!-- 프로그램팀 일정: 로딩 화면 → 데이터 비동기 로드 -->
+<div class="mb-6">
+    <h2 class="text-2xl font-bold">프로그램팀 일정</h2>
+    <p class="text-sm text-base-content/60 mt-1">데이터를 불러오는 중입니다</p>
+</div>
+
+<div
+    id="schedule-loader"
+    hx-get="/partials/schedule/data"
+    hx-trigger="load"
+    hx-target="#main-content"
+    hx-indicator="#loading-indicator"
+>
+    <div class="flex flex-col items-center justify-center min-h-[50vh] gap-6">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+        <div class="text-center">
+            <p id="loading-message" class="text-base-content/70 font-medium">
+                Confluence 일정 문서를 가져오는 중...
+            </p>
+            <p class="text-xs text-base-content/40 mt-2">
+                Jira 이슈 매칭에 약 30~50초가 소요될 수 있습니다
+            </p>
+        </div>
+
+        <!-- 단계별 진행 표시 -->
+        <div class="steps steps-vertical lg:steps-horizontal text-xs mt-4">
+            <div id="step-confluence" class="step step-primary">Confluence 일정</div>
+            <div id="step-jira" class="step">Jira 이슈 조회</div>
+            <div id="step-gemini" class="step">AI 매칭 분석</div>
+            <div id="step-done" class="step">완료</div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const messages = [
+        { time: 0,     msg: "Confluence 일정 문서를 가져오는 중...", step: "step-confluence" },
+        { time: 2000,  msg: "Jira 스프린트 이슈를 조회하는 중...", step: "step-jira" },
+        { time: 10000, msg: "Gemini AI로 일정과 Jira 이슈를 매칭하는 중...", step: "step-gemini" },
+        { time: 30000, msg: "AI 분석이 거의 완료되었습니다. 잠시만 기다려주세요...", step: "step-gemini" },
+    ];
+
+    const msgEl = document.getElementById("loading-message");
+    const timers = [];
+
+    messages.forEach(({ time, msg, step }) => {
+        const timer = setTimeout(() => {
+            if (msgEl) msgEl.textContent = msg;
+            const stepEl = document.getElementById(step);
+            if (stepEl && !stepEl.classList.contains("step-primary")) {
+                stepEl.classList.add("step-primary");
+            }
+        }, time);
+        timers.push(timer);
+    });
+
+    // HTMX 요청 완료 시 타이머 정리
+    document.body.addEventListener("htmx:afterRequest", function cleanup() {
+        timers.forEach(clearTimeout);
+        document.body.removeEventListener("htmx:afterRequest", cleanup);
+    });
+})();
+</script>
