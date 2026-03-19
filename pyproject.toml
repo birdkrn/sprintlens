@@ -50,6 +50,9 @@ ignore = [
     "E501", # line-length handled by formatter
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["N802"]  # 한국어 테스트 메서드명 허용
+
 [tool.ruff.lint.isort]
 known-first-party = ["sprintlens"]
 

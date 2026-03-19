@@ -33,7 +33,7 @@ def create_app() -> Flask:
         jira_service = JiraService(
             base_url=config.jira_base_url,
             username=config.jira_username,
-            api_token=config.jira_api_token,
+            password=config.jira_password,
             board_id=config.jira_board_id,
         )
         confluence_service = ConfluenceService(

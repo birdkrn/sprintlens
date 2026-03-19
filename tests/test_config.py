@@ -12,7 +12,7 @@ class TestConfig:
         errors = config.validate()
         assert "JIRA_BASE_URL" in errors
         assert "JIRA_USERNAME" in errors
-        assert "JIRA_API_TOKEN" in errors
+        assert "JIRA_PASSWORD" in errors
         assert "JIRA_BOARD_ID" in errors
         assert "JIRA_PROJECT_KEY" in errors
         assert "CONFLUENCE_BASE_URL" in errors
@@ -22,7 +22,7 @@ class TestConfig:
         config = Config(
             jira_base_url="https://jira.test.com",
             jira_username="user",
-            jira_api_token="token",
+            jira_password="password",
             jira_board_id="100",
             jira_project_key="TEST",
             confluence_base_url="https://confluence.test.com",

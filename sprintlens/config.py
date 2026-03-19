@@ -1,7 +1,7 @@
 """SprintLens 설정 관리 모듈."""
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
@@ -22,7 +22,7 @@ class Config:
     # Jira
     jira_base_url: str = ""
     jira_username: str = ""
-    jira_api_token: str = ""
+    jira_password: str = ""
     jira_board_id: str = ""
     jira_project_key: str = ""
 
@@ -45,8 +45,8 @@ class Config:
             errors.append("JIRA_BASE_URL")
         if not self.jira_username:
             errors.append("JIRA_USERNAME")
-        if not self.jira_api_token:
-            errors.append("JIRA_API_TOKEN")
+        if not self.jira_password:
+            errors.append("JIRA_PASSWORD")
         if not self.jira_board_id:
             errors.append("JIRA_BOARD_ID")
         if not self.jira_project_key:
@@ -83,7 +83,7 @@ def load_config() -> Config:
         flask_secret_key=os.getenv("FLASK_SECRET_KEY", "change-me"),
         jira_base_url=os.getenv("JIRA_BASE_URL", ""),
         jira_username=os.getenv("JIRA_USERNAME", ""),
-        jira_api_token=os.getenv("JIRA_API_TOKEN", ""),
+        jira_password=os.getenv("JIRA_PASSWORD", ""),
         jira_board_id=os.getenv("JIRA_BOARD_ID", ""),
         jira_project_key=os.getenv("JIRA_PROJECT_KEY", ""),
         confluence_base_url=os.getenv("CONFLUENCE_BASE_URL", ""),

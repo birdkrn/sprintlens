@@ -1,7 +1,5 @@
 """테스트 공통 픽스처."""
 
-import os
-
 import pytest
 
 
@@ -16,7 +14,7 @@ def mock_env_vars(monkeypatch):
         "FLASK_SECRET_KEY": "test-secret",
         "JIRA_BASE_URL": "https://jira.test.com",
         "JIRA_USERNAME": "test_user",
-        "JIRA_API_TOKEN": "test_token",
+        "JIRA_PASSWORD": "test_password",
         "JIRA_BOARD_ID": "100",
         "JIRA_PROJECT_KEY": "TEST",
         "CONFLUENCE_BASE_URL": "https://confluence.test.com",
@@ -39,7 +37,7 @@ def clean_env(monkeypatch):
     keys = [
         "LOG_LEVEL", "FLASK_HOST", "FLASK_PORT", "FLASK_DEBUG",
         "FLASK_SECRET_KEY", "JIRA_BASE_URL", "JIRA_USERNAME",
-        "JIRA_API_TOKEN", "JIRA_BOARD_ID", "JIRA_PROJECT_KEY",
+        "JIRA_PASSWORD", "JIRA_BOARD_ID", "JIRA_PROJECT_KEY",
         "CONFLUENCE_BASE_URL", "CONFLUENCE_USERNAME",
         "CONFLUENCE_API_TOKEN", "CONFLUENCE_SPRINT_PAGE_ID",
         "SLACK_BOT_TOKEN", "SLACK_CHANNEL_ID", "SLACK_REPORT_TIME",
