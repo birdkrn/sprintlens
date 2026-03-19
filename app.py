@@ -1,14 +1,18 @@
 """SprintLens - 스프린트 진행상황 리포트 웹 서비스."""
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from flask import Flask, render_template, request
 
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
+from sprintlens.gemini_service import GeminiService
 from sprintlens.jira_service import JiraService
 from sprintlens.logging_config import get_logger, setup_logging
+from sprintlens.prompt_loader import PromptLoader
 from sprintlens.report_service import ReportService
+from sprintlens.schedule_matcher import ScheduleMatcher
 from sprintlens.schedule_parser import parse_schedule_html
 from sprintlens.scheduler import ReportScheduler
 from sprintlens.slack_service import SlackService
@@ -52,6 +56,22 @@ def create_app() -> Flask:
             username=config.confluence_username,
             password=config.confluence_password,
         )
+
+    # Gemini AI + 일정 매칭 서비스
+    schedule_matcher: ScheduleMatcher | None = None
+    if config.gemini_api_key:
+        gemini_service = GeminiService(
+            api_key=config.gemini_api_key,
+            model=config.gemini_model,
+        )
+        prompts_dir = Path(__file__).resolve().parent / "prompts"
+        prompt_loader = PromptLoader(prompts_dir)
+        schedule_matcher = ScheduleMatcher(
+            gemini_service=gemini_service,
+            prompt_loader=prompt_loader,
+        )
+    else:
+        logger.warning("Gemini API 키 미설정: AI 매칭 비활성화")
 
     # 슬랙 스케줄러 (활성화된 경우)
     scheduler: ReportScheduler | None = None
@@ -192,14 +212,23 @@ def create_app() -> Flask:
     # ------------------------------------------------------------------
 
     def _build_schedule():
-        """Confluence에서 스프린트 일정을 가져와 파싱한다."""
+        """Confluence 일정을 가져와 파싱하고, Jira 이슈를 AI로 매칭한다."""
         if not confluence_service or not config.confluence_sprint_page_id:
             return None
         try:
             page = confluence_service.get_page(
                 config.confluence_sprint_page_id
             )
-            return parse_schedule_html(page.title, page.body_html)
+            schedule = parse_schedule_html(page.title, page.body_html)
+
+            # AI 매칭: Jira 이슈와 연결
+            if schedule_matcher and jira_service:
+                sprint = jira_service.get_active_sprint()
+                if sprint:
+                    issues = jira_service.get_sprint_issues(sprint.id)
+                    schedule_matcher.match(schedule, issues)
+
+            return schedule
         except Exception:
             logger.exception("스프린트 일정 조회 실패")
             return None

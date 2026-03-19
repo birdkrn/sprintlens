@@ -13,7 +13,7 @@ from sprintlens.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-_DEFAULT_MODEL = "gemini-2.0-flash"
+_DEFAULT_MODEL = "gemini-2.5-flash"
 _MAX_RETRIES = 3
 _RETRY_BASE_DELAY_SECONDS = 5
 

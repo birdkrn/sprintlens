@@ -10,6 +10,16 @@ logger = get_logger(__name__)
 
 
 @dataclass
+class MatchedIssue:
+    """매칭된 Jira 이슈 정보."""
+
+    key: str
+    summary: str
+    status: str
+    status_category: str = ""  # "done", "indeterminate", "new"
+
+
+@dataclass
 class ScheduleTask:
     """개별 일감 항목."""
 
@@ -17,6 +27,8 @@ class ScheduleTask:
     assignee: str = ""
     estimate_days: float = 0.0
     sub_items: list[str] = field(default_factory=list)
+    matched_issues: list[MatchedIssue] = field(default_factory=list)
+    match_confidence: str = ""  # "high", "medium", "low", "none"
 
 
 @dataclass

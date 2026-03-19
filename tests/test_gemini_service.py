@@ -14,21 +14,21 @@ class TestGeminiResponse:
     """GeminiResponse 데이터 클래스 테스트."""
 
     def test_기본_응답_생성(self) -> None:
-        response = GeminiResponse(text="응답 텍스트", model="gemini-2.0-flash")
+        response = GeminiResponse(text="응답 텍스트", model="gemini-2.5-flash")
         assert response.text == "응답 텍스트"
-        assert response.model == "gemini-2.0-flash"
+        assert response.model == "gemini-2.5-flash"
         assert response.thoughts == []
 
     def test_사고_과정_포함_응답(self) -> None:
         response = GeminiResponse(
             text="최종 답변",
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             thoughts=["사고 과정 1"],
         )
         assert response.thoughts == ["사고 과정 1"]
 
     def test_응답은_불변이다(self) -> None:
-        response = GeminiResponse(text="테스트", model="gemini-2.0-flash")
+        response = GeminiResponse(text="테스트", model="gemini-2.5-flash")
         with pytest.raises(AttributeError):
             response.text = "변경"  # type: ignore[misc]
 
@@ -40,7 +40,7 @@ class TestGeminiService:
     def test_생성자가_Client를_생성한다(self, mock_cls: MagicMock) -> None:
         service = GeminiService(api_key="test-key")
         mock_cls.assert_called_once_with(api_key="test-key")
-        assert service.model == "gemini-2.0-flash"
+        assert service.model == "gemini-2.5-flash"
 
     @patch("sprintlens.gemini_service.genai.Client")
     def test_커스텀_모델_지정(self, mock_cls: MagicMock) -> None:
@@ -68,7 +68,7 @@ class TestGeminiService:
 
         assert isinstance(result, GeminiResponse)
         assert result.text == "생성된 응답"
-        assert result.model == "gemini-2.0-flash"
+        assert result.model == "gemini-2.5-flash"
         mock_client.models.generate_content.assert_called_once()
 
     @patch("sprintlens.gemini_service.genai.Client")

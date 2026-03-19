@@ -34,57 +34,125 @@
     {% endif %}
 </div>
 
-<!-- 담당자 요약 -->
-{% if schedule.all_assignees %}
-<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
-    <h3 class="text-sm font-semibold mb-3 text-base-content/70">담당자</h3>
-    <div class="flex flex-wrap gap-2">
-        {% for name in schedule.all_assignees %}
-        <span class="badge badge-outline">{{ name }}</span>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
 <!-- 섹션별 일정 -->
 {% for section in schedule.sections %}
-<div class="mb-6">
-    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
-        {{ section.name }}
-    </h3>
+<div class="mb-8">
+    <h3 class="text-lg font-bold mb-4">{{ section.name }}</h3>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {% for cat in section.categories %}
-        <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5">
-            <div class="flex items-center justify-between mb-3">
-                <h4 class="font-semibold">{{ cat.name }}</h4>
-                <span class="badge badge-sm badge-outline">{{ "%.1f"|format(cat.total_estimate) }}일</span>
-            </div>
-            <div class="space-y-2">
-                {% for task in cat.tasks %}
-                <div class="flex items-start gap-2 text-sm">
-                    <span class="badge badge-ghost badge-xs mt-1 shrink-0">{{ task.estimate_days }}d</span>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <span class="truncate">{{ task.title }}</span>
-                            {% if task.assignee %}
-                            <span class="badge badge-primary badge-xs shrink-0">{{ task.assignee }}</span>
-                            {% endif %}
-                        </div>
-                        {% if task.sub_items %}
-                        <ul class="mt-1 ml-3 text-xs text-base-content/60 list-disc">
-                            {% for sub in task.sub_items %}
-                            <li>{{ sub }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+    {% for cat in section.categories %}
+    <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold text-base">{{ cat.name }}</h4>
+            <span class="badge badge-sm badge-outline">{{ "%.1f"|format(cat.total_estimate) }}일</span>
         </div>
-        {% endfor %}
+
+        <!-- 일감 테이블 -->
+        <div class="overflow-x-auto">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th class="w-16">추정일</th>
+                        <th>일감</th>
+                        <th class="w-20">담당자</th>
+                        <th>Jira 이슈</th>
+                        <th class="w-20">진행</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in cat.tasks %}
+                    <tr class="hover">
+                        <!-- 추정일 -->
+                        <td class="text-center">
+                            <span class="badge badge-ghost badge-sm">{{ task.estimate_days }}d</span>
+                        </td>
+
+                        <!-- 일감 제목 -->
+                        <td>
+                            <div class="text-sm">{{ task.title }}</div>
+                            {% if task.sub_items %}
+                            <ul class="mt-1 ml-3 text-xs text-base-content/50 list-disc">
+                                {% for sub in task.sub_items %}
+                                <li>{{ sub }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </td>
+
+                        <!-- 담당자 -->
+                        <td>
+                            {% if task.assignee %}
+                            <span class="badge badge-primary badge-xs">{{ task.assignee }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 매칭된 Jira 이슈 -->
+                        <td>
+                            {% if task.matched_issues %}
+                            <div class="flex flex-col gap-1">
+                                {% for issue in task.matched_issues %}
+                                <div class="flex items-center gap-1.5 text-xs">
+                                    {% if issue.status_category == 'done' %}
+                                    <span class="badge badge-success badge-xs">{{ issue.status }}</span>
+                                    {% elif issue.status_category == 'indeterminate' %}
+                                    <span class="badge badge-info badge-xs">{{ issue.status }}</span>
+                                    {% else %}
+                                    <span class="badge badge-ghost badge-xs">{{ issue.status }}</span>
+                                    {% endif %}
+                                    <a
+                                        href="{{ config.jira_base_url }}/browse/{{ issue.key }}"
+                                        target="_blank"
+                                        class="link link-primary font-mono"
+                                    >{{ issue.key }}</a>
+                                    <span class="text-base-content/60 truncate max-w-48" title="{{ issue.summary }}">{{ issue.summary }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% elif task.match_confidence == 'none' %}
+                            <span class="text-xs text-base-content/40">이슈 없음</span>
+                            {% else %}
+                            <span class="text-xs text-base-content/30">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 진행 상태 아이콘 -->
+                        <td class="text-center">
+                            {% if task.matched_issues %}
+                                {% set all_done = task.matched_issues | selectattr('status_category', 'equalto', 'done') | list | length == task.matched_issues | length %}
+                                {% set any_progress = task.matched_issues | selectattr('status_category', 'equalto', 'indeterminate') | list | length > 0 %}
+                                {% if all_done %}
+                                <div class="tooltip" data-tip="완료">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                {% elif any_progress %}
+                                <div class="tooltip" data-tip="진행중">
+                                    <span class="loading loading-ring loading-sm text-info"></span>
+                                </div>
+                                {% else %}
+                                <div class="tooltip" data-tip="대기">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                {% endif %}
+                            {% elif task.match_confidence == 'none' %}
+                            <div class="tooltip" data-tip="Jira 미생성">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            {% else %}
+                            <span class="text-xs text-base-content/30">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+    {% endfor %}
 </div>
 {% endfor %}
 
@@ -95,16 +163,12 @@
     <h2 class="text-2xl font-bold">프로그램팀 일정</h2>
     <p class="text-sm text-base-content/60 mt-1">스프린트 및 마일스톤 일정을 관리합니다</p>
 </div>
-
 <div class="flex items-center justify-center min-h-[50vh]">
     <div class="text-center">
         <div class="text-5xl mb-4 opacity-20">📅</div>
         <h3 class="text-lg font-semibold mb-2">데이터 없음</h3>
         <p class="text-base-content/60 text-sm">
             Confluence 연동 설정이 필요하거나 일정 페이지를 찾을 수 없습니다.
-        </p>
-        <p class="text-sm text-base-content/40 mt-2">
-            <code>.env</code> 파일에서 <code>CONFLUENCE_SPRINT_PAGE_ID</code>를 설정해주세요.
         </p>
     </div>
 </div>
