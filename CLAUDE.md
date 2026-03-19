@@ -49,7 +49,8 @@
 - Jira Server v8.5.7은 **REST API v2**를 사용 (Jira Cloud API v3과 다름)
 - `atlassian-python-api` 라이브러리 사용 시 Cloud 모드가 아닌 **Server 모드**로 설정 필요
 - 사내 네트워크에서만 접근 가능하므로 VPN 또는 사내 환경 필요
-- 인증: 환경 변수(`JIRA_URL`, `JIRA_USERNAME`, `JIRA_PASSWORD` 또는 `JIRA_TOKEN`)로 관리
+- 인증: **Basic Auth (ID/Password)** 방식 사용 (PAT 토큰 발급 불가)
+- 환경 변수: `JIRA_BASE_URL`, `JIRA_USERNAME`, `JIRA_PASSWORD`, `JIRA_BOARD_ID`, `JIRA_PROJECT_KEY`
 - 관리자 API(`/rest/api/2/configuration`, 스킴 변경 등)는 사용 불가
 
 ### 주요 API 경로 참고
