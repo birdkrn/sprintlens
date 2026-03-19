@@ -1,0 +1,31 @@
+<!-- 홈: 빠른 바로가기 -->
+<div class="flex items-center justify-center min-h-[70vh]">
+    <div class="text-center max-w-2xl">
+        <h1 class="text-4xl font-bold tracking-tight mb-3">SprintLens</h1>
+        <p class="text-base-content/60 text-lg mb-10">
+            프로그램팀 스프린트 진행상황을 한눈에 확인하세요
+        </p>
+
+        <!-- 바로가기 카드 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+            {% for item in menu_items %}
+            <button
+                class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-6 text-left hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
+                hx-get="{{ item.partial_url }}"
+                hx-target="#main-content"
+                hx-push-url="{{ item.url }}"
+                hx-indicator="#loading-indicator"
+                hx-on::after-request="
+                    document.querySelectorAll('#top-menu button').forEach(b => b.classList.remove('btn-active'));
+                    document.querySelectorAll('#top-menu button').forEach(b => {
+                        if(b.textContent.trim() === '{{ item.label }}') b.classList.add('btn-active');
+                    });
+                "
+            >
+                <div class="text-base font-semibold mb-1">{{ item.label }}</div>
+                <div class="text-sm text-base-content/50">{{ item.description }}</div>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>

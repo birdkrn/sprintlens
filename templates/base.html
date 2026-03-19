@@ -7,11 +7,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}"></script>
 </head>
-<body class="bg-base-200 min-h-screen">
-    <!-- Navbar -->
-    <div class="navbar bg-base-100 border-b border-base-300 px-6">
+<body class="bg-base-200 h-screen flex flex-col overflow-hidden">
+
+    <!-- Navbar (상단 고정, 64px) -->
+    <div class="navbar bg-base-100 border-b border-base-300 px-6 h-16 min-h-16 shrink-0">
         <div class="flex-1 gap-6">
-            <span class="text-xl font-bold tracking-tight">SprintLens</span>
+            <!-- 로고 (홈으로 이동) -->
+            <a
+                href="/"
+                class="text-xl font-bold tracking-tight hover:opacity-80 transition-opacity"
+                hx-get="/partials/home"
+                hx-target="#main-content"
+                hx-push-url="/"
+                hx-on::after-request="
+                    document.querySelectorAll('#top-menu button').forEach(b => b.classList.remove('btn-active'));
+                "
+            >SprintLens</a>
             <!-- Top Menu -->
             <nav id="top-menu" class="flex gap-1">
                 {% for item in menu_items %}
@@ -30,28 +41,27 @@
             </nav>
         </div>
         <div class="flex-none gap-2">
-            <button
-                class="btn btn-ghost btn-sm"
-                hx-get="{{ current_partial_url|default('/partials/dashboard') }}"
-                hx-target="#main-content"
-                hx-indicator="#loading-indicator"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                새로고침
-            </button>
+            <!-- Loading Indicator (인라인) -->
+            <span id="loading-indicator" class="htmx-indicator loading loading-spinner loading-sm"></span>
         </div>
     </div>
 
-    <!-- Loading Indicator -->
-    <div id="loading-indicator" class="htmx-indicator w-full">
-        <progress class="progress progress-primary w-full"></progress>
+    <!-- Body: Sidebar + Main -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Sidebar (좌측 고정, 240px) -->
+        <aside class="hidden lg:flex flex-col w-60 shrink-0 bg-base-100 border-r border-base-300 overflow-y-auto">
+            <div id="sidebar-content" class="p-4">
+                {% block sidebar %}{% endblock %}
+            </div>
+        </aside>
+
+        <!-- Main Content (스크롤 가능) -->
+        <div class="flex-1 overflow-y-auto p-6">
+            {% block content %}{% endblock %}
+        </div>
+
     </div>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
-        {% block content %}{% endblock %}
-    </main>
 </body>
 </html>

@@ -2,12 +2,7 @@
 {% block title %}SprintLens - 스프린트 현황{% endblock %}
 
 {% block content %}
-<div
-    id="main-content"
-    hx-get="/partials/dashboard"
-    hx-trigger="load, every 300s"
-    hx-indicator="#loading-indicator"
->
-    {% include "partials/dashboard.html" %}
+<div id="main-content">
+    {% include active_partial %}
 </div>
 {% endblock %}

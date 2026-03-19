@@ -85,6 +85,7 @@ def create_app() -> Flask:
 
         id: str
         label: str
+        description: str
         url: str
         partial_url: str
 
@@ -92,86 +93,105 @@ def create_app() -> Flask:
         MenuItem(
             id="dashboard",
             label="대시보드",
-            url="/",
+            description="스프린트 현황 및 일감 진행률",
+            url="/dashboard",
             partial_url="/partials/dashboard",
         ),
+        MenuItem(
+            id="schedule",
+            label="프로그램팀 일정",
+            description="스프린트 및 마일스톤 일정 관리",
+            url="/schedule",
+            partial_url="/partials/schedule",
+        ),
     ]
+
+    # URL → 메뉴 ID 매핑
+    _url_to_menu: dict[str, str] = {m.url: m.id for m in menu_items}
 
     @app.context_processor
     def inject_menu():
         """모든 템플릿에 메뉴 데이터를 주입한다."""
-        active = "dashboard"
-        for item in menu_items:
-            if request.path == item.url:
-                active = item.id
-                break
-
-        active_item = next(
-            (m for m in menu_items if m.id == active), menu_items[0]
-        )
+        active = _url_to_menu.get(request.path, "")
         return {
             "menu_items": menu_items,
             "active_menu": active,
-            "current_partial_url": active_item.partial_url,
         }
 
     # ------------------------------------------------------------------
     # 라우트
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # 페이지 라우트
+    # ------------------------------------------------------------------
+
     @app.route("/")
     def index():
-        """스프린트 리포트 메인 페이지."""
-        report = None
-        schedule = None
-
-        if report_service:
-            try:
-                report = report_service.generate_sprint_report()
-            except Exception:
-                logger.exception("스프린트 리포트 생성 실패")
-
-        if confluence_service and config.confluence_sprint_page_id:
-            try:
-                schedule = confluence_service.get_sprint_schedule(
-                    config.confluence_sprint_page_id
-                )
-            except Exception:
-                logger.exception("컨플루언스 일정 조회 실패")
-
+        """홈 페이지."""
         return render_template(
             "index.html",
-            report=report,
-            schedule=schedule,
+            active_partial="partials/home.html",
             config=config,
         )
+
+    @app.route("/dashboard")
+    def dashboard():
+        """대시보드 페이지 (풀 페이지)."""
+        report = _build_dashboard_report()
+        return render_template(
+            "index.html",
+            active_partial="partials/dashboard.html",
+            report=report,
+            config=config,
+        )
+
+    @app.route("/schedule")
+    def schedule():
+        """프로그램팀 일정 페이지 (풀 페이지)."""
+        return render_template(
+            "index.html",
+            active_partial="partials/schedule.html",
+            config=config,
+        )
+
+    # ------------------------------------------------------------------
+    # HTMX 파셜 라우트
+    # ------------------------------------------------------------------
+
+    @app.route("/partials/home")
+    def partials_home():
+        """HTMX 파셜: 홈."""
+        return render_template("partials/home.html", config=config)
 
     @app.route("/partials/dashboard")
     def partials_dashboard():
-        """HTMX 파셜: 대시보드 콘텐츠."""
-        report = None
-        schedule = None
-
-        if report_service:
-            try:
-                report = report_service.generate_sprint_report()
-            except Exception:
-                logger.exception("스프린트 리포트 생성 실패")
-
-        if confluence_service and config.confluence_sprint_page_id:
-            try:
-                schedule = confluence_service.get_sprint_schedule(
-                    config.confluence_sprint_page_id
-                )
-            except Exception:
-                logger.exception("컨플루언스 일정 조회 실패")
-
+        """HTMX 파셜: 대시보드."""
+        report = _build_dashboard_report()
         return render_template(
             "partials/dashboard.html",
             report=report,
-            schedule=schedule,
             config=config,
         )
+
+    @app.route("/partials/schedule")
+    def partials_schedule():
+        """HTMX 파셜: 프로그램팀 일정."""
+        return render_template("partials/schedule.html", config=config)
+
+    # ------------------------------------------------------------------
+    # 헬퍼
+    # ------------------------------------------------------------------
+
+    def _build_dashboard_report():
+        """대시보드용 스프린트 리포트를 생성한다."""
+        if not report_service:
+            return None
+        try:
+            return report_service.generate_sprint_report()
+        except Exception:
+            logger.exception("스프린트 리포트 생성 실패")
+            return None
 
     @app.route("/api/report")
     def api_report():

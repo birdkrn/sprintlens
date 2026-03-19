@@ -64,14 +64,16 @@
 
 ## 디자인 스타일
 
+> **상세 레이아웃 명세:** [`docs/layout-guide.md`](docs/layout-guide.md) 참조
+
 - **컨셉:** Modern SaaS Dashboard
 - **테마:** DaisyUI `light` (화이트 모드 기본)
-- **레이아웃:** 벤토 그리드 (Tailwind `grid` 기반, 카드형 배치)
+- **레이아웃:** 상단 Navbar + 좌측 Sidebar(240px) + Main Content (3단 구조)
 - **카드 스타일:** `bg-base-100 rounded-2xl shadow-sm border border-base-300`
 - **컴포넌트:** DaisyUI `stat`, `progress`, `table`, `badge`, `navbar` 적극 활용
 - **인터랙션:** HTMX로 페이지 전환 없이 파셜 렌더링 (`/partials/*`)
 - **자동 갱신:** 5분 주기 HTMX polling (`hx-trigger="every 300s"`)
-- **반응형:** `grid-cols-2 md:grid-cols-4` (Stats), `grid-cols-1 lg:grid-cols-2` (테이블)
+- **반응형:** 모바일에서 Sidebar 숨김 (`hidden lg:block`), 벤토 그리드 적응형
 
 ## 개발 원칙 (Development Principles)
 이 프로젝트는 다음 원칙을 따릅니다:
