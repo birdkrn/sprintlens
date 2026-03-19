@@ -1,9 +1,23 @@
 """SprintLens 설정 관리 모듈."""
 
+import json
 import os
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
+
+from sprintlens.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class SidebarLink:
+    """사이드바 외부 링크 항목."""
+
+    name: str
+    url: str
+    icon: str = "link"  # "board", "doc", "link" 등
 
 
 @dataclass(frozen=True)
@@ -31,6 +45,9 @@ class Config:
     confluence_username: str = ""
     confluence_api_token: str = ""
     confluence_sprint_page_id: str = ""
+
+    # Sidebar 외부 링크
+    sidebar_links: tuple[SidebarLink, ...] = ()
 
     # Slack
     slack_bot_token: str = ""
@@ -80,6 +97,25 @@ class Config:
         return errors
 
 
+def _parse_sidebar_links(raw: str) -> tuple[SidebarLink, ...]:
+    """SIDEBAR_LINKS 환경 변수(JSON 배열)를 파싱한다."""
+    if not raw:
+        return ()
+    try:
+        items = json.loads(raw)
+        return tuple(
+            SidebarLink(
+                name=item["name"],
+                url=item["url"],
+                icon=item.get("icon", "link"),
+            )
+            for item in items
+        )
+    except (json.JSONDecodeError, KeyError, TypeError):
+        logger.warning("SIDEBAR_LINKS 파싱 실패: %s", raw)
+        return ()
+
+
 def load_config() -> Config:
     """환경 변수에서 설정을 로드한다."""
     load_dotenv()
@@ -102,6 +138,9 @@ def load_config() -> Config:
         slack_bot_token=os.getenv("SLACK_BOT_TOKEN", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
         slack_report_time=os.getenv("SLACK_REPORT_TIME", "09:00"),
+        sidebar_links=_parse_sidebar_links(
+            os.getenv("SIDEBAR_LINKS", "")
+        ),
         slack_report_enabled=os.getenv("SLACK_REPORT_ENABLED", "false").lower()
         == "true",
     )
