@@ -9,7 +9,6 @@ import pytest
 from sprintlens.jira_service import IssueInfo
 from sprintlens.schedule_matcher import ScheduleMatcher
 from sprintlens.schedule_parser import (
-    MatchedIssue,
     ScheduleCategory,
     ScheduleSection,
     ScheduleTask,
@@ -52,12 +51,12 @@ def sample_schedule() -> SprintSchedule:
                         tasks=[
                             ScheduleTask(
                                 title="GMG 빌드 및 전달",
-                                assignee="주세영",
+                                assignees=["주세영"],
                                 estimate_days=2.0,
                             ),
                             ScheduleTask(
                                 title="GMG QA 이슈 대응",
-                                assignee="심민석",
+                                assignees=["심민석"],
                                 estimate_days=3.0,
                             ),
                         ],

@@ -47,22 +47,27 @@ class TestParseTaskText:
         task = _parse_task_text("(5) 기사단전 3.0 퀘스트 - 정경수")
         assert task.estimate_days == 5.0
         assert task.title == "기사단전 3.0 퀘스트"
-        assert task.assignee == "정경수"
+        assert task.assignees == ["정경수"]
+
+    def test_여러_담당자(self):
+        task = _parse_task_text("(5) 기사단전 3.0 퀘스트, 시스템 - 정경수, 이진명")
+        assert task.assignees == ["정경수", "이진명"]
+        assert task.title == "기사단전 3.0 퀘스트, 시스템"
 
     def test_소수점_추정일(self):
         task = _parse_task_text("(0.5) 이벤트 상단 재화 표시 - 장준혁")
         assert task.estimate_days == 0.5
-        assert task.assignee == "장준혁"
+        assert task.assignees == ["장준혁"]
 
     def test_추정일_없는_일감(self):
         task = _parse_task_text("버그 수정 - 김철수")
         assert task.estimate_days == 0.0
-        assert task.assignee == "김철수"
+        assert task.assignees == ["김철수"]
 
     def test_담당자_없는_일감(self):
         task = _parse_task_text("(2) 기능 개발")
         assert task.estimate_days == 2.0
-        assert task.assignee == ""
+        assert task.assignees == []
         assert task.title == "기능 개발"
 
 
@@ -103,7 +108,7 @@ class TestParseScheduleHtml:
         tasks = result.sections[0].categories[0].tasks
         assert len(tasks) == 2
         assert tasks[0].estimate_days == 5.0
-        assert tasks[0].assignee == "정경수"
+        assert tasks[0].assignees == ["정경수"]
 
     def test_하위_항목_파싱(self):
         result = parse_schedule_html("테스트", SAMPLE_HTML)

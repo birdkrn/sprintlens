@@ -24,7 +24,7 @@ class ScheduleTask:
     """개별 일감 항목."""
 
     title: str
-    assignee: str = ""
+    assignees: list[str] = field(default_factory=list)
     estimate_days: float = 0.0
     sub_items: list[str] = field(default_factory=list)
     matched_issues: list[MatchedIssue] = field(default_factory=list)
@@ -77,8 +77,7 @@ class SprintSchedule:
         for sec in self.sections:
             for cat in sec.categories:
                 for task in cat.tasks:
-                    if task.assignee:
-                        names.add(task.assignee)
+                    names.update(task.assignees)
         return sorted(names)
 
 
@@ -89,18 +88,18 @@ class SprintSchedule:
 # (숫자) 패턴으로 추정일 추출: "(5)", "(0.5)" 등
 _ESTIMATE_RE = re.compile(r"^\((\d+(?:\.\d+)?)\)\s*")
 
-# 담당자 추출: 마지막 "- 이름" 패턴
-_ASSIGNEE_RE = re.compile(r"\s*-\s*([가-힣a-zA-Z]+)\s*$")
+# 담당자 추출: 마지막 "- 이름1, 이름2" 패턴
+_ASSIGNEE_RE = re.compile(r"\s*-\s*((?:[가-힣a-zA-Z]+(?:\s*,\s*)?)+)\s*$")
 
 
 def _parse_task_text(text: str) -> ScheduleTask:
     """일감 텍스트 한 줄을 파싱한다.
 
-    예: "(5) 기사단전 3.0 퀘스트, 시스템 - 정경수"
+    예: "(5) 기사단전 3.0 퀘스트, 시스템 - 정경수, 이진명"
     """
     text = text.strip()
     estimate = 0.0
-    assignee = ""
+    assignees: list[str] = []
 
     # 추정일 추출
     match = _ESTIMATE_RE.match(text)
@@ -108,15 +107,16 @@ def _parse_task_text(text: str) -> ScheduleTask:
         estimate = float(match.group(1))
         text = text[match.end():]
 
-    # 담당자 추출
+    # 담당자 추출 (쉼표 구분 여러 명 지원)
     match = _ASSIGNEE_RE.search(text)
     if match:
-        assignee = match.group(1)
+        raw = match.group(1)
+        assignees = [name.strip() for name in raw.split(",") if name.strip()]
         text = text[: match.start()]
 
     return ScheduleTask(
         title=text.strip(),
-        assignee=assignee,
+        assignees=assignees,
         estimate_days=estimate,
     )
 

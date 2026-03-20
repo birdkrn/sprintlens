@@ -83,7 +83,7 @@ class ScheduleMatcher:
             for cat in section.categories:
                 lines.append(f"[{cat.name}]")
                 for task in cat.tasks:
-                    assignee = f" - {task.assignee}" if task.assignee else ""
+                    assignee = f" - {', '.join(task.assignees)}" if task.assignees else ""
                     lines.append(
                         f"  ({task.estimate_days}) {task.title}{assignee}"
                     )
