@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, render_template, request
 from sprintlens.burndown import calculate_burndown
 from sprintlens.logging_config import get_logger
 from sprintlens.schedule_parser import SprintSchedule, parse_schedule_html
+from sprintlens.slack_report_formatter import format_slack_report
 
 logger = get_logger(__name__)
 
@@ -27,6 +28,8 @@ def init_routes(
     cache_store,
     settings_store,
     settings_keys: list[str],
+    slack_service=None,
+    schedule_builder=None,
 ) -> None:
     """라우트를 Flask 앱에 등록한다."""
 
@@ -163,6 +166,26 @@ def init_routes(
             cache_store.invalidate(schedule_cache_key)
 
         return jsonify({"ok": True, "saved": list(to_save.keys())})
+
+    @api.route("/slack/test", methods=["POST"])
+    def api_slack_test():
+        """슬랙 리포트를 즉시 테스트 발송한다."""
+        if not slack_service:
+            return jsonify({"error": "Slack Webhook URL이 설정되지 않았습니다."}), 503
+        if not schedule_builder:
+            return jsonify({"error": "일정 빌더가 초기화되지 않았습니다."}), 503
+
+        schedule = schedule_builder()
+        if not schedule:
+            return jsonify({"error": "스프린트 일정을 가져올 수 없습니다."}), 500
+
+        text = format_slack_report(
+            schedule, dashboard_url=config.slack_dashboard_url
+        )
+        success = slack_service.send_message(text)
+        if success:
+            return jsonify({"ok": True, "message": "슬랙 발송 완료"})
+        return jsonify({"error": "슬랙 발송 실패"}), 500
 
     @api.route("/report")
     def api_report():

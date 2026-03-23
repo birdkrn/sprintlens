@@ -118,9 +118,59 @@
             <div id="save-result" class="mt-3 text-sm hidden"></div>
         </div>
     </form>
+
+    <!-- 슬랙 리포트 테스트 -->
+    <div class="border-t border-base-300 pt-6 mt-8">
+        <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wider mb-4">슬랙 리포트</h3>
+        <p class="text-sm text-base-content/60 mb-3">프로그램팀 대시보드 현황을 슬랙 채널에 즉시 발송합니다.</p>
+        <div class="flex items-center gap-3">
+            <button
+                type="button"
+                id="slack-test-btn"
+                class="btn btn-outline btn-sm"
+                onclick="testSlack()"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                슬랙 테스트 발송
+            </button>
+            <span id="slack-result" class="text-sm"></span>
+        </div>
+    </div>
 </div>
 
 <script>
+function testSlack() {
+    const btn = document.getElementById('slack-test-btn');
+    const resultEl = document.getElementById('slack-result');
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    resultEl.className = 'text-sm text-base-content/50';
+    resultEl.textContent = '발송 중... (약 1분 소요)';
+
+    fetch('/api/slack/test', { method: 'POST' })
+    .then(r => r.json().then(body => ({ ok: r.ok, body })))
+    .then(({ ok, body }) => {
+        if (ok) {
+            resultEl.className = 'text-sm text-success';
+            resultEl.textContent = '슬랙 발송 완료!';
+        } else {
+            resultEl.className = 'text-sm text-error';
+            resultEl.textContent = body.error || '발송 실패';
+        }
+    })
+    .catch(() => {
+        resultEl.className = 'text-sm text-error';
+        resultEl.textContent = '서버 연결 실패';
+    })
+    .finally(() => {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    });
+}
+
 function saveSettings() {
     const form = document.getElementById('settings-form');
     const password = document.getElementById('settings-password').value;

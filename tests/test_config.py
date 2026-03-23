@@ -37,12 +37,11 @@ class TestConfig:
         """슬랙 설정 검증 테스트."""
         config = Config()
         errors = config.validate_slack()
-        assert "SLACK_BOT_TOKEN" in errors
-        assert "SLACK_CHANNEL_ID" in errors
+        assert "SLACK_WEBHOOK_URL" in errors
 
     def test_validate_slack_no_errors(self):
         """슬랙 설정이 모두 있는 경우."""
-        config = Config(slack_bot_token="xoxb-test", slack_channel_id="C123")
+        config = Config(slack_webhook_url="https://hooks.slack.com/test")
         assert config.validate_slack() == []
 
 

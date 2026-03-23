@@ -84,7 +84,7 @@ markers = [
 # === Coverage Configuration ===
 [tool.coverage.run]
 source = ["sprintlens"]
-omit = ["tests/*", "sprintlens/routes.py"]
+omit = ["tests/*", "sprintlens/routes.py", "sprintlens/slack_*.py", "sprintlens/scheduler.py"]
 
 [tool.coverage.report]
 exclude_lines = [

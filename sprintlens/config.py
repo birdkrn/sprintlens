@@ -65,10 +65,10 @@ class Config:
     sidebar_links: tuple[SidebarLink, ...] = ()
 
     # Slack
-    slack_bot_token: str = ""
-    slack_channel_id: str = ""
+    slack_webhook_url: str = ""
     slack_report_time: str = "09:00"
     slack_report_enabled: bool = False
+    slack_dashboard_url: str = ""
 
     def validate(self) -> list[str]:
         """전체 필수 설정값 검증. 누락된 항목 목록을 반환한다."""
@@ -107,10 +107,8 @@ class Config:
     def validate_slack(self) -> list[str]:
         """슬랙 리포트 관련 설정값 검증."""
         errors: list[str] = []
-        if not self.slack_bot_token:
-            errors.append("SLACK_BOT_TOKEN")
-        if not self.slack_channel_id:
-            errors.append("SLACK_CHANNEL_ID")
+        if not self.slack_webhook_url:
+            errors.append("SLACK_WEBHOOK_URL")
         return errors
 
 
@@ -163,9 +161,9 @@ def load_config() -> Config:
         confluence_password=os.getenv("CONFLUENCE_PASSWORD", ""),
         confluence_space_key=os.getenv("CONFLUENCE_SPACE_KEY", ""),
         confluence_sprint_page_id=os.getenv("CONFLUENCE_SPRINT_PAGE_ID", ""),
-        slack_bot_token=os.getenv("SLACK_BOT_TOKEN", ""),
-        slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
+        slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL", ""),
         slack_report_time=os.getenv("SLACK_REPORT_TIME", "09:00"),
+        slack_dashboard_url=os.getenv("SLACK_DASHBOARD_URL", ""),
         program_team_members=tuple(
             name.strip()
             for name in os.getenv("PROGRAM_TEAM_MEMBERS", "").split(",")

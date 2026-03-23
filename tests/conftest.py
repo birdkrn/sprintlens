@@ -22,8 +22,8 @@ def mock_env_vars(monkeypatch):
         "CONFLUENCE_PASSWORD": "test_password",
         "CONFLUENCE_SPACE_KEY": "TEST",
         "CONFLUENCE_SPRINT_PAGE_ID": "12345",
-        "SLACK_BOT_TOKEN": "xoxb-test-token",
-        "SLACK_CHANNEL_ID": "C12345",
+        "SLACK_WEBHOOK_URL": "https://hooks.slack.com/test",
+        "SLACK_DASHBOARD_URL": "http://localhost:5000/schedule",
         "SLACK_REPORT_TIME": "09:00",
         "SLACK_REPORT_ENABLED": "false",
     }
@@ -42,7 +42,7 @@ def clean_env(monkeypatch):
         "CONFLUENCE_BASE_URL", "CONFLUENCE_USERNAME",
         "CONFLUENCE_PASSWORD", "CONFLUENCE_SPACE_KEY",
         "CONFLUENCE_SPRINT_PAGE_ID",
-        "SLACK_BOT_TOKEN", "SLACK_CHANNEL_ID", "SLACK_REPORT_TIME",
+        "SLACK_WEBHOOK_URL", "SLACK_DASHBOARD_URL", "SLACK_REPORT_TIME",
         "SLACK_REPORT_ENABLED",
     ]
     for key in keys:

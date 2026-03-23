@@ -57,8 +57,36 @@ def create_app() -> Flask:
     )
     settings_store = SettingsStore(db_path=data_dir / "settings.db")
 
-    # 슬랙 스케줄러
-    _init_slack_scheduler(config, report_service)
+    # 슬랙 스케줄러용 일정 빌더
+    def _build_schedule_for_slack():
+        """슬랙 리포트용 스프린트 일정을 빌드한다."""
+        if not confluence_service or not config.confluence_sprint_page_id:
+            return None
+        try:
+            from sprintlens.schedule_parser import parse_schedule_html
+
+            page = confluence_service.get_page(
+                config.confluence_sprint_page_id
+            )
+            schedule = parse_schedule_html(page.title, page.body_html)
+            if schedule_matcher and jira_service:
+                sprint = jira_service.get_active_sprint()
+                if sprint:
+                    issues = jira_service.get_sprint_issues(
+                        sprint.id, expand_changelog=True
+                    )
+                    if config.program_team_members:
+                        members = set(config.program_team_members)
+                        issues = [
+                            i for i in issues if i.assignee in members
+                        ]
+                    schedule_matcher.match(schedule, issues)
+            return schedule
+        except Exception:
+            logger.exception("슬랙 리포트용 일정 빌드 실패")
+            return None
+
+    _init_slack_scheduler(config, _build_schedule_for_slack)
 
     # ------------------------------------------------------------------
     # 메뉴 시스템
@@ -101,6 +129,11 @@ def create_app() -> Flask:
     # ------------------------------------------------------------------
     # 라우트 등록
     # ------------------------------------------------------------------
+    # Slack 서비스 (테스트 발송용)
+    slack_svc = None
+    if config.slack_webhook_url:
+        slack_svc = SlackService(webhook_url=config.slack_webhook_url)
+
     init_routes(
         app,
         config=config,
@@ -111,6 +144,8 @@ def create_app() -> Flask:
         cache_store=cache_store,
         settings_store=settings_store,
         settings_keys=SETTINGS_KEYS,
+        slack_service=slack_svc,
+        schedule_builder=_build_schedule_for_slack,
     )
 
     return app
@@ -165,22 +200,20 @@ def _init_gemini_matcher(config) -> ScheduleMatcher | None:
     )
 
 
-def _init_slack_scheduler(config, report_service) -> None:
+def _init_slack_scheduler(config, schedule_builder) -> None:
     """슬랙 스케줄러를 초기화한다."""
-    if not config.slack_report_enabled or not report_service:
+    if not config.slack_report_enabled:
         return
     errors = config.validate_slack()
     if errors:
         logger.error("슬랙 설정 누락: %s", ", ".join(errors))
         return
-    slack_service = SlackService(
-        bot_token=config.slack_bot_token,
-        channel_id=config.slack_channel_id,
-    )
+    slack_service = SlackService(webhook_url=config.slack_webhook_url)
     scheduler = ReportScheduler(
-        report_service=report_service,
         slack_service=slack_service,
+        schedule_builder=schedule_builder,
         report_time=config.slack_report_time,
+        dashboard_url=config.slack_dashboard_url,
     )
     scheduler.start()
 
