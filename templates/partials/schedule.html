@@ -53,10 +53,10 @@
     {% endif %}
 </div>
 
-<!-- 섹션별 일정 -->
-{% for section in schedule.sections %}
+<!-- 계획된 일정 -->
 <div class="mb-8">
-    <h3 class="text-lg font-bold mb-4">{{ section.name }}</h3>
+    <h3 class="text-lg font-bold mb-4">계획된 일정</h3>
+{% for section in schedule.sections %}
 
     {% for cat in section.categories %}
     <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-4">
@@ -190,8 +190,8 @@
         </div>
     </div>
     {% endfor %}
-</div>
 {% endfor %}
+</div>
 
 <!-- 번다운 차트 -->
 {% if burndown %}
