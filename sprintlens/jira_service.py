@@ -234,27 +234,30 @@ class JiraService:
 
 
 def _extract_resolved_date(issue: dict) -> str | None:
-    """changelog에서 done 카테고리로 전환된 마지막 날짜를 추출한다.
+    """현재 done 상태인 이슈의 마지막 상태 변경 날짜를 추출한다.
+
+    현재 statusCategory가 done인 이슈에 대해서만,
+    changelog에서 가장 마지막 상태 변경 날짜를 반환한다.
 
     Returns:
         "YYYY-MM-DD" 형식 문자열 또는 None.
     """
+    # 현재 상태가 done이 아니면 None
+    status = issue.get("fields", {}).get("status", {})
+    status_category = status.get("statusCategory", {}).get("key", "")
+    if status_category != "done":
+        return None
+
     changelog = issue.get("changelog", {})
     histories = changelog.get("histories", [])
     if not histories:
         return None
 
-    # done 상태: Resolved, Closed, 해결됨, 닫힘
-    done_statuses = {"resolved", "closed", "해결됨", "닫힘"}
+    # 마지막 상태 변경 날짜 추출
     resolved_date = None
-
     for history in histories:
         for item in history.get("items", []):
-            if item.get("field") != "status":
-                continue
-            to_status = (item.get("toString") or "").lower()
-            if to_status in done_statuses:
-                # "2026-03-18T11:14:09.123+0900" → "2026-03-18"
+            if item.get("field") == "status":
                 resolved_date = history["created"][:10]
 
     return resolved_date

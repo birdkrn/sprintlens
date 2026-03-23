@@ -116,16 +116,23 @@ def calculate_burndown(schedule: SprintSchedule) -> BurndownData | None:
                         )
 
     # 실제 번다운: 날짜별 남은 포인트 계산
-    actual: list[float] = [total_points]  # "시작" 포인트
+    # 완료일별 포인트 합산 (O(n))
+    daily_done: dict[date, float] = {}
+    for comp_date, pts in completed:
+        daily_done[comp_date] = daily_done.get(comp_date, 0.0) + pts
+
+    # 누적합으로 계산 (O(n))
+    actual: list[float] = [total_points]
+    cumulative_done = 0.0
     today = date.today()
     today_index: int | None = None
 
     for i, workday in enumerate(workdays):
-        # 이 작업일까지 누적 완료 포인트
-        done_so_far = sum(
-            pts for comp_date, pts in completed if comp_date <= workday
-        )
-        actual.append(round(total_points - done_so_far, 1))
+        # 이 작업일까지의 완료 포인트를 누적
+        for d in sorted(daily_done):
+            if d <= workday:
+                cumulative_done += daily_done.pop(d)
+        actual.append(round(total_points - cumulative_done, 1))
 
         if workday == today:
             today_index = i + 1  # +1: "시작" 오프셋

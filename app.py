@@ -1,12 +1,10 @@
 """SprintLens - 스프린트 진행상황 리포트 웹 서비스."""
 
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, request
 
-from sprintlens.burndown import calculate_burndown
 from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
@@ -15,13 +13,24 @@ from sprintlens.jira_service import JiraService
 from sprintlens.logging_config import get_logger, setup_logging
 from sprintlens.prompt_loader import PromptLoader
 from sprintlens.report_service import ReportService
+from sprintlens.routes import init_routes
 from sprintlens.schedule_matcher import ScheduleMatcher
-from sprintlens.schedule_parser import SprintSchedule, parse_schedule_html
 from sprintlens.scheduler import ReportScheduler
 from sprintlens.settings_store import SettingsStore
 from sprintlens.slack_service import SlackService
 
 logger = get_logger(__name__)
+
+# 웹 설정에서 변경 가능한 항목 목록
+SETTINGS_KEYS = [
+    "confluence_sprint_page_id",
+    "program_team_members",
+    "jira_base_url",
+    "jira_board_id",
+    "jira_project_key",
+    "confluence_base_url",
+    "confluence_space_key",
+]
 
 
 def create_app() -> Flask:
@@ -32,50 +41,13 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = config.flask_secret_key
 
-    # 서비스 초기화 (설정이 유효한 경우에만)
-    jira_service: JiraService | None = None
-    confluence_service: ConfluenceService | None = None
-    report_service: ReportService | None = None
-
-    jira_errors = config.validate_jira()
-    if jira_errors:
-        logger.warning("Jira 설정 누락: %s", ", ".join(jira_errors))
-    else:
-        jira_service = JiraService(
-            base_url=config.jira_base_url,
-            username=config.jira_username,
-            password=config.jira_password,
-            board_id=config.jira_board_id,
-        )
-        report_service = ReportService(jira_service=jira_service)
-
-    confluence_errors = config.validate_confluence()
-    if confluence_errors:
-        logger.warning(
-            "Confluence 설정 누락: %s", ", ".join(confluence_errors)
-        )
-    else:
-        confluence_service = ConfluenceService(
-            base_url=config.confluence_base_url,
-            username=config.confluence_username,
-            password=config.confluence_password,
-        )
-
-    # Gemini AI + 일정 매칭 서비스
-    schedule_matcher: ScheduleMatcher | None = None
-    if config.gemini_api_key:
-        gemini_service = GeminiService(
-            api_key=config.gemini_api_key,
-            model=config.gemini_model,
-        )
-        prompts_dir = Path(__file__).resolve().parent / "prompts"
-        prompt_loader = PromptLoader(prompts_dir)
-        schedule_matcher = ScheduleMatcher(
-            gemini_service=gemini_service,
-            prompt_loader=prompt_loader,
-        )
-    else:
-        logger.warning("Gemini API 키 미설정: AI 매칭 비활성화")
+    # ------------------------------------------------------------------
+    # 서비스 초기화
+    # ------------------------------------------------------------------
+    jira_service = _init_jira(config)
+    report_service = ReportService(jira_service=jira_service) if jira_service else None
+    confluence_service = _init_confluence(config)
+    schedule_matcher = _init_gemini_matcher(config)
 
     # 저장소
     data_dir = Path(__file__).resolve().parent / "data"
@@ -85,39 +57,8 @@ def create_app() -> Flask:
     )
     settings_store = SettingsStore(db_path=data_dir / "settings.db")
 
-    # DB 설정값으로 config 오버라이드 가능한 항목 목록
-    settings_keys = [
-        "confluence_sprint_page_id",
-        "program_team_members",
-        "jira_base_url",
-        "jira_board_id",
-        "jira_project_key",
-        "confluence_base_url",
-        "confluence_space_key",
-    ]
-
-    # 슬랙 스케줄러 (활성화된 경우)
-    scheduler: ReportScheduler | None = None
-    if config.slack_report_enabled and report_service:
-        slack_errors = config.validate_slack()
-        if slack_errors:
-            logger.error("슬랙 설정 누락: %s", ", ".join(slack_errors))
-        else:
-            slack_service = SlackService(
-                bot_token=config.slack_bot_token,
-                channel_id=config.slack_channel_id,
-            )
-            scheduler = ReportScheduler(
-                report_service=report_service,
-                slack_service=slack_service,
-                report_time=config.slack_report_time,
-            )
-            scheduler.start()
-
-    # 서비스를 app에 저장하여 라우트에서 사용
-    app.config["report_service"] = report_service
-    app.config["confluence_service"] = confluence_service
-    app.config["app_config"] = config
+    # 슬랙 스케줄러
+    _init_slack_scheduler(config, report_service)
 
     # ------------------------------------------------------------------
     # 메뉴 시스템
@@ -149,289 +90,99 @@ def create_app() -> Flask:
             partial_url="/partials/schedule",
         ),
     ]
-
-    # URL → 메뉴 ID 매핑
-    _url_to_menu: dict[str, str] = {m.url: m.id for m in menu_items}
+    url_to_menu: dict[str, str] = {m.url: m.id for m in menu_items}
 
     @app.context_processor
     def inject_menu():
         """모든 템플릿에 메뉴 데이터를 주입한다."""
-        active = _url_to_menu.get(request.path, "")
-        return {
-            "menu_items": menu_items,
-            "active_menu": active,
-        }
+        active = url_to_menu.get(request.path, "")
+        return {"menu_items": menu_items, "active_menu": active}
 
     # ------------------------------------------------------------------
-    # 라우트
+    # 라우트 등록
     # ------------------------------------------------------------------
-
-    # ------------------------------------------------------------------
-    # 페이지 라우트
-    # ------------------------------------------------------------------
-
-    @app.route("/")
-    def index():
-        """홈 페이지."""
-        return render_template(
-            "index.html",
-            active_partial="partials/home.html",
-            config=config,
-        )
-
-    @app.route("/dashboard")
-    def dashboard():
-        """대시보드 페이지 (로딩 화면 먼저 표시)."""
-        return render_template(
-            "index.html",
-            active_partial="partials/dashboard_loading.html",
-            config=config,
-        )
-
-    @app.route("/schedule")
-    def schedule():
-        """프로그램팀 일정 페이지 (로딩 화면 먼저 표시)."""
-        return render_template(
-            "index.html",
-            active_partial="partials/schedule_loading.html",
-            config=config,
-        )
-
-    # ------------------------------------------------------------------
-    # HTMX 파셜 라우트
-    # ------------------------------------------------------------------
-
-    @app.route("/partials/home")
-    def partials_home():
-        """HTMX 파셜: 홈."""
-        return render_template("partials/home.html", config=config)
-
-    @app.route("/partials/dashboard")
-    def partials_dashboard():
-        """HTMX 파셜: 대시보드 (로딩 화면)."""
-        return render_template(
-            "partials/dashboard_loading.html", config=config
-        )
-
-    @app.route("/partials/dashboard/data")
-    def partials_dashboard_data():
-        """HTMX 파셜: 대시보드 데이터 (비동기 로드)."""
-        report = _build_dashboard_report()
-        return render_template(
-            "partials/dashboard.html",
-            report=report,
-            config=config,
-        )
-
-    @app.route("/partials/schedule")
-    def partials_schedule():
-        """HTMX 파셜: 프로그램팀 일정 (로딩 화면)."""
-        refresh = request.args.get("refresh") == "1"
-        return render_template(
-            "partials/schedule_loading.html",
-            refresh=refresh,
-            config=config,
-        )
-
-    @app.route("/partials/schedule/data")
-    def partials_schedule_data():
-        """HTMX 파셜: 프로그램팀 일정 데이터 (비동기 로드)."""
-        refresh = request.args.get("refresh") == "1"
-        sprint_schedule, updated_at = _build_schedule_cached(
-            force_refresh=refresh
-        )
-        burndown = None
-        if sprint_schedule:
-            burndown = calculate_burndown(sprint_schedule)
-        return render_template(
-            "partials/schedule.html",
-            schedule=sprint_schedule,
-            burndown=burndown,
-            updated_at=updated_at,
-            config=config,
-        )
-
-    # ------------------------------------------------------------------
-    # 헬퍼
-    # ------------------------------------------------------------------
-
-    schedule_cache_key = (
-        f"schedule:{config.confluence_sprint_page_id}"
+    init_routes(
+        app,
+        config=config,
+        report_service=report_service,
+        confluence_service=confluence_service,
+        jira_service=jira_service,
+        schedule_matcher=schedule_matcher,
+        cache_store=cache_store,
+        settings_store=settings_store,
+        settings_keys=SETTINGS_KEYS,
     )
 
-    def _build_schedule_cached(
-        *, force_refresh: bool = False
-    ) -> tuple[SprintSchedule | None, datetime | None]:
-        """캐시를 활용하여 스프린트 일정을 반환한다.
-
-        Returns:
-            (SprintSchedule, 업데이트시각) 튜플.
-        """
-        # 캐시 조회 (강제 갱신이 아닌 경우)
-        if not force_refresh:
-            cached_data, updated_at = cache_store.get(schedule_cache_key)
-            if cached_data is not None:
-                return SprintSchedule.from_dict(cached_data), updated_at
-
-        # 캐시 미스 또는 강제 갱신: 새로 빌드
-        schedule = _build_schedule_fresh()
-        if schedule is None:
-            return None, None
-
-        # 캐시 저장
-        updated_at = cache_store.set(
-            schedule_cache_key, schedule.to_dict()
-        )
-        return schedule, updated_at
-
-    def _build_schedule_fresh() -> SprintSchedule | None:
-        """Confluence 일정을 가져와 파싱하고, Jira 이슈를 AI로 매칭한다."""
-        if not confluence_service or not config.confluence_sprint_page_id:
-            return None
-        try:
-            page = confluence_service.get_page(
-                config.confluence_sprint_page_id
-            )
-            schedule = parse_schedule_html(page.title, page.body_html)
-
-            # AI 매칭: Jira 이슈와 연결
-            if schedule_matcher and jira_service:
-                sprint = jira_service.get_active_sprint()
-                if sprint:
-                    issues = jira_service.get_sprint_issues(
-                        sprint.id, expand_changelog=True
-                    )
-                    # 프로그램팀 멤버 이슈만 필터링
-                    if config.program_team_members:
-                        members = set(config.program_team_members)
-                        issues = [
-                            i for i in issues if i.assignee in members
-                        ]
-                    schedule_matcher.match(schedule, issues)
-
-            return schedule
-        except Exception:
-            logger.exception("스프린트 일정 조회 실패")
-            return None
-
-    def _build_dashboard_report():
-        """대시보드용 스프린트 리포트를 생성한다."""
-        if not report_service:
-            return None
-        try:
-            return report_service.generate_sprint_report()
-        except Exception:
-            logger.exception("스프린트 리포트 생성 실패")
-            return None
-
-    # ------------------------------------------------------------------
-    # 설정 페이지
-    # ------------------------------------------------------------------
-
-    def _get_effective_settings() -> dict[str, str]:
-        """DB 설정 → .env 폴백 순으로 유효한 설정값을 반환한다."""
-        db_settings = settings_store.get_all()
-        result: dict[str, str] = {}
-        for key in settings_keys:
-            db_val = db_settings.get(key, "")
-            if db_val:
-                result[key] = db_val
-            else:
-                # config에서 가져오기 (program_team_members는 tuple→str 변환)
-                env_val = getattr(config, key, "")
-                if isinstance(env_val, tuple):
-                    env_val = ",".join(env_val)
-                result[key] = str(env_val)
-        return result
-
-    @app.route("/settings")
-    def settings_page():
-        """설정 페이지."""
-        return render_template(
-            "index.html",
-            active_partial="partials/settings.html",
-            settings=_get_effective_settings(),
-            config=config,
-        )
-
-    @app.route("/partials/settings")
-    def partials_settings():
-        """HTMX 파셜: 설정 화면."""
-        return render_template(
-            "partials/settings.html",
-            settings=_get_effective_settings(),
-            config=config,
-        )
-
-    @app.route("/api/settings", methods=["POST"])
-    def api_save_settings():
-        """설정 저장 API."""
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "요청 데이터가 없습니다."}), 400
-
-        # 비밀번호 확인
-        password = data.pop("password", "")
-        if password != config.settings_password:
-            return jsonify({"error": "비밀번호가 일치하지 않습니다."}), 403
-
-        # 유효한 키만 저장
-        to_save = {
-            k: str(v).strip()
-            for k, v in data.items()
-            if k in settings_keys
-        }
-        if to_save:
-            settings_store.set_many(to_save)
-            # 캐시 무효화 (설정 변경 시 새로 빌드하도록)
-            cache_store.invalidate(schedule_cache_key)
-
-        return jsonify({"ok": True, "saved": list(to_save.keys())})
-
-    @app.route("/api/report")
-    def api_report():
-        """스프린트 리포트 JSON API."""
-        if not report_service:
-            return {"error": "Jira 설정이 되어 있지 않습니다."}, 503
-
-        report = report_service.generate_sprint_report()
-        if not report:
-            return {"error": "활성 스프린트가 없습니다."}, 404
-
-        return {
-            "sprint": {
-                "name": report.sprint.name,
-                "state": report.sprint.state,
-                "start_date": report.sprint.start_date,
-                "end_date": report.sprint.end_date,
-            },
-            "progress": {
-                "total": report.total_issues,
-                "done": report.done_count,
-                "percent": round(report.progress_percent, 1),
-            },
-            "by_assignee": [
-                {
-                    "name": ar.name,
-                    "total": ar.total,
-                    "done": ar.done_count,
-                    "in_progress": ar.in_progress_count,
-                    "todo": ar.todo_count,
-                }
-                for ar in report.by_assignee
-            ],
-            "by_story": [
-                {
-                    "story_key": sr.story_key,
-                    "story_summary": sr.story_summary,
-                    "total": sr.total,
-                    "done": sr.done_count,
-                }
-                for sr in report.by_story
-            ],
-        }
-
     return app
+
+
+# ------------------------------------------------------------------
+# 서비스 초기화 헬퍼
+# ------------------------------------------------------------------
+
+
+def _init_jira(config) -> JiraService | None:
+    """Jira 서비스를 초기화한다."""
+    errors = config.validate_jira()
+    if errors:
+        logger.warning("Jira 설정 누락: %s", ", ".join(errors))
+        return None
+    return JiraService(
+        base_url=config.jira_base_url,
+        username=config.jira_username,
+        password=config.jira_password,
+        board_id=config.jira_board_id,
+    )
+
+
+def _init_confluence(config) -> ConfluenceService | None:
+    """Confluence 서비스를 초기화한다."""
+    errors = config.validate_confluence()
+    if errors:
+        logger.warning("Confluence 설정 누락: %s", ", ".join(errors))
+        return None
+    return ConfluenceService(
+        base_url=config.confluence_base_url,
+        username=config.confluence_username,
+        password=config.confluence_password,
+    )
+
+
+def _init_gemini_matcher(config) -> ScheduleMatcher | None:
+    """Gemini AI + ScheduleMatcher를 초기화한다."""
+    if not config.gemini_api_key:
+        logger.warning("Gemini API 키 미설정: AI 매칭 비활성화")
+        return None
+    gemini_service = GeminiService(
+        api_key=config.gemini_api_key,
+        model=config.gemini_model,
+    )
+    prompts_dir = Path(__file__).resolve().parent / "prompts"
+    prompt_loader = PromptLoader(prompts_dir)
+    return ScheduleMatcher(
+        gemini_service=gemini_service,
+        prompt_loader=prompt_loader,
+    )
+
+
+def _init_slack_scheduler(config, report_service) -> None:
+    """슬랙 스케줄러를 초기화한다."""
+    if not config.slack_report_enabled or not report_service:
+        return
+    errors = config.validate_slack()
+    if errors:
+        logger.error("슬랙 설정 누락: %s", ", ".join(errors))
+        return
+    slack_service = SlackService(
+        bot_token=config.slack_bot_token,
+        channel_id=config.slack_channel_id,
+    )
+    scheduler = ReportScheduler(
+        report_service=report_service,
+        slack_service=slack_service,
+        report_time=config.slack_report_time,
+    )
+    scheduler.start()
 
 
 if __name__ == "__main__":

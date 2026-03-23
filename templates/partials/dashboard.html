@@ -170,16 +170,6 @@
     </div>
 </div>
 
-<!-- Confluence 일정 -->
-{% if schedule %}
-<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5">
-    <h3 class="text-lg font-semibold mb-4">스프린트 일정 (Confluence)</h3>
-    <div class="prose max-w-none">
-        {{ schedule.content_html | safe }}
-    </div>
-</div>
-{% endif %}
-
 {% else %}
 
 <!-- 데이터 없음 -->
