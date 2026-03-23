@@ -107,22 +107,33 @@
                         <!-- 매칭된 Jira 이슈 -->
                         <td>
                             {% if task.matched_issues %}
-                            <div class="flex flex-col gap-1">
+                            <div class="flex flex-col gap-1.5">
                                 {% for issue in task.matched_issues %}
                                 <div class="flex items-center gap-1.5 text-xs">
+                                    {% if issue.icon_url %}
+                                    <img src="{{ issue.icon_url }}" alt="{{ issue.issue_type }}" class="h-3.5 w-3.5 shrink-0">
+                                    {% endif %}
                                     {% if issue.status_category == 'done' %}
-                                    <span class="badge badge-success badge-xs">{{ issue.status }}</span>
+                                    <span class="badge badge-success badge-xs shrink-0">{{ issue.status }}</span>
                                     {% elif issue.status_category == 'indeterminate' %}
-                                    <span class="badge badge-info badge-xs">{{ issue.status }}</span>
+                                    <span class="badge badge-info badge-xs shrink-0">{{ issue.status }}</span>
                                     {% else %}
-                                    <span class="badge badge-ghost badge-xs">{{ issue.status }}</span>
+                                    <span class="badge badge-ghost badge-xs shrink-0">{{ issue.status }}</span>
                                     {% endif %}
                                     <a
                                         href="{{ config.jira_base_url }}/browse/{{ issue.key }}"
                                         target="_blank"
-                                        class="link link-primary font-mono"
+                                        class="link link-primary font-mono shrink-0"
                                     >{{ issue.key }}</a>
-                                    <span class="text-base-content/60 truncate max-w-48" title="{{ issue.summary }}">{{ issue.summary }}</span>
+                                    {% if issue.parent_key %}
+                                    <span class="text-base-content/40 shrink-0">/</span>
+                                    <a
+                                        href="{{ config.jira_base_url }}/browse/{{ issue.parent_key }}"
+                                        target="_blank"
+                                        class="link link-secondary font-mono shrink-0 text-[10px]"
+                                    >{{ issue.parent_key }}</a>
+                                    {% endif %}
+                                    <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary }}">{{ issue.summary }}</span>
                                 </div>
                                 {% endfor %}
                             </div>

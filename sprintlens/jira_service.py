@@ -33,6 +33,9 @@ class IssueInfo:
     story_key: str | None = None
     story_summary: str | None = None
     issue_type: str = ""
+    icon_url: str = ""
+    parent_key: str = ""
+    parent_summary: str = ""
     resolved_date: str | None = None  # "YYYY-MM-DD" (done 상태 전환 날짜)
 
 
@@ -208,6 +211,8 @@ class JiraService:
         # changelog에서 done 상태 전환 날짜 추출
         resolved_date = _extract_resolved_date(issue)
 
+        issuetype = fields["issuetype"]
+
         return IssueInfo(
             key=issue["key"],
             summary=fields.get("summary", ""),
@@ -218,7 +223,12 @@ class JiraService:
             story_summary=(
                 parent["fields"]["summary"] if parent else None
             ),
-            issue_type=fields["issuetype"]["name"],
+            issue_type=issuetype["name"],
+            icon_url=issuetype.get("iconUrl", ""),
+            parent_key=parent["key"] if parent else "",
+            parent_summary=(
+                parent["fields"]["summary"] if parent else ""
+            ),
             resolved_date=resolved_date,
         )
 

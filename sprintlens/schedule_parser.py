@@ -17,6 +17,9 @@ class MatchedIssue:
     summary: str
     status: str
     status_category: str = ""  # "done", "indeterminate", "new"
+    icon_url: str = ""
+    parent_key: str = ""
+    parent_summary: str = ""
     resolved_date: str | None = None  # "YYYY-MM-DD"
 
 

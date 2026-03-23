@@ -55,13 +55,11 @@ class ScheduleMatcher:
             ),
         )
 
-        # issue key → resolved_date 매핑
-        issue_resolved_map = {
-            i.key: i.resolved_date for i in issues if i.resolved_date
-        }
+        # issue key → IssueInfo 매핑 (추가 필드 전달용)
+        issue_map = {i.key: i for i in issues}
 
         matches = self._parse_response(response.text)
-        self._apply_matches(schedule, matches, issue_resolved_map)
+        self._apply_matches(schedule, matches, issue_map)
 
         matched_count = sum(
             1
@@ -133,10 +131,10 @@ class ScheduleMatcher:
     def _apply_matches(
         schedule: SprintSchedule,
         matches: list[dict],
-        issue_resolved_map: dict[str, str] | None = None,
+        issue_map: dict | None = None,
     ) -> None:
         """파싱된 매칭 결과를 SprintSchedule의 task에 적용한다."""
-        resolved_map = issue_resolved_map or {}
+        imap = issue_map or {}
 
         # task title → task 객체 매핑 (빠른 검색용)
         task_map: dict[str, list] = {}
@@ -159,19 +157,36 @@ class ScheduleMatcher:
             if not tasks:
                 continue
 
-            matched_issues = [
-                MatchedIssue(
-                    key=issue.get("key", ""),
-                    summary=issue.get("summary", ""),
-                    status=issue.get("status", ""),
-                    status_category=issue.get("status_category", ""),
-                    resolved_date=resolved_map.get(
-                        issue.get("key", "")
-                    ),
+            matched_issues = []
+            for issue_data in match.get("matched_issues", []):
+                issue_key = issue_data.get("key", "")
+                if not issue_key:
+                    continue
+                # Jira 원본 데이터에서 추가 필드 가져오기
+                original = imap.get(issue_key)
+                matched_issues.append(
+                    MatchedIssue(
+                        key=issue_key,
+                        summary=issue_data.get("summary", ""),
+                        status=issue_data.get("status", ""),
+                        status_category=issue_data.get(
+                            "status_category", ""
+                        ),
+                        icon_url=(
+                            original.icon_url if original else ""
+                        ),
+                        parent_key=(
+                            original.parent_key if original else ""
+                        ),
+                        parent_summary=(
+                            original.parent_summary if original else ""
+                        ),
+                        resolved_date=(
+                            original.resolved_date if original else None
+                        ),
+                    )
                 )
-                for issue in match.get("matched_issues", [])
-                if issue.get("key")
-            ]
+
             confidence = match.get("match_confidence", "")
 
             for task in tasks:
