@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, render_template, request
+from flask import Flask, jsonify, render_template, request
 
 from sprintlens.burndown import calculate_burndown
 from sprintlens.cache_store import CacheStore
@@ -18,6 +18,7 @@ from sprintlens.report_service import ReportService
 from sprintlens.schedule_matcher import ScheduleMatcher
 from sprintlens.schedule_parser import SprintSchedule, parse_schedule_html
 from sprintlens.scheduler import ReportScheduler
+from sprintlens.settings_store import SettingsStore
 from sprintlens.slack_service import SlackService
 
 logger = get_logger(__name__)
@@ -76,11 +77,24 @@ def create_app() -> Flask:
     else:
         logger.warning("Gemini API 키 미설정: AI 매칭 비활성화")
 
-    # 캐시 저장소
+    # 저장소
+    data_dir = Path(__file__).resolve().parent / "data"
     cache_store = CacheStore(
-        db_path=Path(__file__).resolve().parent / "data" / "cache.db",
+        db_path=data_dir / "cache.db",
         ttl_minutes=config.cache_ttl_minutes,
     )
+    settings_store = SettingsStore(db_path=data_dir / "settings.db")
+
+    # DB 설정값으로 config 오버라이드 가능한 항목 목록
+    settings_keys = [
+        "confluence_sprint_page_id",
+        "program_team_members",
+        "jira_base_url",
+        "jira_board_id",
+        "jira_project_key",
+        "confluence_base_url",
+        "confluence_space_key",
+    ]
 
     # 슬랙 스케줄러 (활성화된 경우)
     scheduler: ReportScheduler | None = None
@@ -309,6 +323,70 @@ def create_app() -> Flask:
         except Exception:
             logger.exception("스프린트 리포트 생성 실패")
             return None
+
+    # ------------------------------------------------------------------
+    # 설정 페이지
+    # ------------------------------------------------------------------
+
+    def _get_effective_settings() -> dict[str, str]:
+        """DB 설정 → .env 폴백 순으로 유효한 설정값을 반환한다."""
+        db_settings = settings_store.get_all()
+        result: dict[str, str] = {}
+        for key in settings_keys:
+            db_val = db_settings.get(key, "")
+            if db_val:
+                result[key] = db_val
+            else:
+                # config에서 가져오기 (program_team_members는 tuple→str 변환)
+                env_val = getattr(config, key, "")
+                if isinstance(env_val, tuple):
+                    env_val = ",".join(env_val)
+                result[key] = str(env_val)
+        return result
+
+    @app.route("/settings")
+    def settings_page():
+        """설정 페이지."""
+        return render_template(
+            "index.html",
+            active_partial="partials/settings.html",
+            settings=_get_effective_settings(),
+            config=config,
+        )
+
+    @app.route("/partials/settings")
+    def partials_settings():
+        """HTMX 파셜: 설정 화면."""
+        return render_template(
+            "partials/settings.html",
+            settings=_get_effective_settings(),
+            config=config,
+        )
+
+    @app.route("/api/settings", methods=["POST"])
+    def api_save_settings():
+        """설정 저장 API."""
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "요청 데이터가 없습니다."}), 400
+
+        # 비밀번호 확인
+        password = data.pop("password", "")
+        if password != config.settings_password:
+            return jsonify({"error": "비밀번호가 일치하지 않습니다."}), 403
+
+        # 유효한 키만 저장
+        to_save = {
+            k: str(v).strip()
+            for k, v in data.items()
+            if k in settings_keys
+        }
+        if to_save:
+            settings_store.set_many(to_save)
+            # 캐시 무효화 (설정 변경 시 새로 빌드하도록)
+            cache_store.invalidate(schedule_cache_key)
+
+        return jsonify({"ok": True, "saved": list(to_save.keys())})
 
     @app.route("/api/report")
     def api_report():

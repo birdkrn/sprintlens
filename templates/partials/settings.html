@@ -1,0 +1,167 @@
+<!-- 설정 화면 -->
+<div class="max-w-2xl">
+    <h2 class="text-2xl font-bold mb-6">설정</h2>
+
+    <form id="settings-form" onsubmit="return false;">
+
+        <!-- 일정 설정 -->
+        <div class="mb-8">
+            <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wider mb-4">일정 설정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm font-medium block mb-1">프로그램팀 Confluence 일정 페이지 ID</label>
+                    <input
+                        type="text"
+                        name="confluence_sprint_page_id"
+                        value="{{ settings.confluence_sprint_page_id }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="예: 180506325"
+                    >
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">프로그램팀 멤버</label>
+                    <input
+                        type="text"
+                        name="program_team_members"
+                        value="{{ settings.program_team_members }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="쉼표 구분 (예: 정경수,이진명,심민석)"
+                    >
+                    <p class="text-xs text-base-content/40 mt-1">Jira displayName 기준, 쉼표로 구분</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Jira 설정 -->
+        <div class="mb-8">
+            <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wider mb-4">Jira 설정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm font-medium block mb-1">Jira Base URL</label>
+                    <input
+                        type="text"
+                        name="jira_base_url"
+                        value="{{ settings.jira_base_url }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="https://jira.example.com"
+                    >
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">스프린트 보드 ID</label>
+                    <input
+                        type="text"
+                        name="jira_board_id"
+                        value="{{ settings.jira_board_id }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="예: 658"
+                    >
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">프로젝트 키</label>
+                    <input
+                        type="text"
+                        name="jira_project_key"
+                        value="{{ settings.jira_project_key }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="예: G2M"
+                    >
+                </div>
+            </div>
+        </div>
+
+        <!-- Confluence 설정 -->
+        <div class="mb-8">
+            <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wider mb-4">Confluence 설정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm font-medium block mb-1">Confluence Base URL</label>
+                    <input
+                        type="text"
+                        name="confluence_base_url"
+                        value="{{ settings.confluence_base_url }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="https://wiki.example.com"
+                    >
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">공간 키</label>
+                    <input
+                        type="text"
+                        name="confluence_space_key"
+                        value="{{ settings.confluence_space_key }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="예: TR"
+                    >
+                </div>
+            </div>
+        </div>
+
+        <!-- 저장 -->
+        <div class="border-t border-base-300 pt-6">
+            <div class="flex items-end gap-3">
+                <div>
+                    <label class="text-sm font-medium block mb-1">비밀번호</label>
+                    <input
+                        type="password"
+                        id="settings-password"
+                        class="input input-bordered input-sm w-48"
+                        placeholder="설정 비밀번호 입력"
+                    >
+                </div>
+                <button
+                    type="button"
+                    id="save-btn"
+                    class="btn btn-primary btn-sm"
+                    onclick="saveSettings()"
+                >저장</button>
+            </div>
+            <div id="save-result" class="mt-3 text-sm hidden"></div>
+        </div>
+    </form>
+</div>
+
+<script>
+function saveSettings() {
+    const form = document.getElementById('settings-form');
+    const password = document.getElementById('settings-password').value;
+    const resultEl = document.getElementById('save-result');
+    const btn = document.getElementById('save-btn');
+
+    if (!password) {
+        resultEl.className = 'mt-3 text-sm text-error';
+        resultEl.textContent = '비밀번호를 입력해주세요.';
+        return;
+    }
+
+    const data = { password };
+    const inputs = form.querySelectorAll('input[name]');
+    inputs.forEach(input => { data[input.name] = input.value; });
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    })
+    .then(r => r.json().then(body => ({ ok: r.ok, body })))
+    .then(({ ok, body }) => {
+        if (ok) {
+            resultEl.className = 'mt-3 text-sm text-success';
+            resultEl.textContent = '설정이 저장되었습니다. 서버 재시작 없이 바로 반영됩니다.';
+        } else {
+            resultEl.className = 'mt-3 text-sm text-error';
+            resultEl.textContent = body.error || '저장에 실패했습니다.';
+        }
+    })
+    .catch(() => {
+        resultEl.className = 'mt-3 text-sm text-error';
+        resultEl.textContent = '서버 연결에 실패했습니다.';
+    })
+    .finally(() => {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    });
+}
+</script>
