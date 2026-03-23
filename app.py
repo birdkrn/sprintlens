@@ -1,10 +1,12 @@
 """SprintLens - 스프린트 진행상황 리포트 웹 서비스."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, render_template, request
 
+from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
 from sprintlens.gemini_service import GeminiService
@@ -13,7 +15,7 @@ from sprintlens.logging_config import get_logger, setup_logging
 from sprintlens.prompt_loader import PromptLoader
 from sprintlens.report_service import ReportService
 from sprintlens.schedule_matcher import ScheduleMatcher
-from sprintlens.schedule_parser import parse_schedule_html
+from sprintlens.schedule_parser import SprintSchedule, parse_schedule_html
 from sprintlens.scheduler import ReportScheduler
 from sprintlens.slack_service import SlackService
 
@@ -72,6 +74,12 @@ def create_app() -> Flask:
         )
     else:
         logger.warning("Gemini API 키 미설정: AI 매칭 비활성화")
+
+    # 캐시 저장소
+    cache_store = CacheStore(
+        db_path=Path(__file__).resolve().parent / "data" / "cache.db",
+        ttl_minutes=config.cache_ttl_minutes,
+    )
 
     # 슬랙 스케줄러 (활성화된 경우)
     scheduler: ReportScheduler | None = None
@@ -203,17 +211,24 @@ def create_app() -> Flask:
     @app.route("/partials/schedule")
     def partials_schedule():
         """HTMX 파셜: 프로그램팀 일정 (로딩 화면)."""
+        refresh = request.args.get("refresh") == "1"
         return render_template(
-            "partials/schedule_loading.html", config=config
+            "partials/schedule_loading.html",
+            refresh=refresh,
+            config=config,
         )
 
     @app.route("/partials/schedule/data")
     def partials_schedule_data():
         """HTMX 파셜: 프로그램팀 일정 데이터 (비동기 로드)."""
-        sprint_schedule = _build_schedule()
+        refresh = request.args.get("refresh") == "1"
+        sprint_schedule, updated_at = _build_schedule_cached(
+            force_refresh=refresh
+        )
         return render_template(
             "partials/schedule.html",
             schedule=sprint_schedule,
+            updated_at=updated_at,
             config=config,
         )
 
@@ -221,7 +236,36 @@ def create_app() -> Flask:
     # 헬퍼
     # ------------------------------------------------------------------
 
-    def _build_schedule():
+    schedule_cache_key = (
+        f"schedule:{config.confluence_sprint_page_id}"
+    )
+
+    def _build_schedule_cached(
+        *, force_refresh: bool = False
+    ) -> tuple[SprintSchedule | None, datetime | None]:
+        """캐시를 활용하여 스프린트 일정을 반환한다.
+
+        Returns:
+            (SprintSchedule, 업데이트시각) 튜플.
+        """
+        # 캐시 조회 (강제 갱신이 아닌 경우)
+        if not force_refresh:
+            cached_data, updated_at = cache_store.get(schedule_cache_key)
+            if cached_data is not None:
+                return SprintSchedule.from_dict(cached_data), updated_at
+
+        # 캐시 미스 또는 강제 갱신: 새로 빌드
+        schedule = _build_schedule_fresh()
+        if schedule is None:
+            return None, None
+
+        # 캐시 저장
+        updated_at = cache_store.set(
+            schedule_cache_key, schedule.to_dict()
+        )
+        return schedule, updated_at
+
+    def _build_schedule_fresh() -> SprintSchedule | None:
         """Confluence 일정을 가져와 파싱하고, Jira 이슈를 AI로 매칭한다."""
         if not confluence_service or not config.confluence_sprint_page_id:
             return None

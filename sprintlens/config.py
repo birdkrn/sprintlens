@@ -33,6 +33,9 @@ class Config:
     flask_debug: bool = False
     flask_secret_key: str = "change-me"
 
+    # Cache
+    cache_ttl_minutes: int = 60
+
     # Jira
     jira_base_url: str = ""
     jira_username: str = ""
@@ -136,6 +139,7 @@ def load_config() -> Config:
         flask_port=int(os.getenv("FLASK_PORT", "5000")),
         flask_debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
         flask_secret_key=os.getenv("FLASK_SECRET_KEY", "change-me"),
+        cache_ttl_minutes=int(os.getenv("CACHE_TTL_MINUTES", "60")),
         jira_base_url=os.getenv("JIRA_BASE_URL", ""),
         jira_username=os.getenv("JIRA_USERNAME", ""),
         jira_password=os.getenv("JIRA_PASSWORD", ""),

@@ -6,7 +6,7 @@
 
 <div
     id="schedule-loader"
-    hx-get="/partials/schedule/data"
+    hx-get="/partials/schedule/data{% if refresh %}?refresh=1{% endif %}"
     hx-trigger="load"
     hx-target="#main-content"
     hx-indicator="#loading-indicator"

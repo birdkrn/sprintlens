@@ -1,7 +1,7 @@
 """Confluence 스프린트 일정 HTML 파서 모듈."""
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from html.parser import HTMLParser
 
 from sprintlens.logging_config import get_logger
@@ -79,6 +79,50 @@ class SprintSchedule:
                 for task in cat.tasks:
                     names.update(task.assignees)
         return sorted(names)
+
+    def to_dict(self) -> dict:
+        """캐시 저장을 위해 딕셔너리로 변환한다."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SprintSchedule":
+        """딕셔너리에서 SprintSchedule을 복원한다."""
+        sections = [
+            ScheduleSection(
+                name=sec["name"],
+                categories=[
+                    ScheduleCategory(
+                        name=cat["name"],
+                        tasks=[
+                            ScheduleTask(
+                                title=t["title"],
+                                assignees=t.get("assignees", []),
+                                estimate_days=t.get("estimate_days", 0.0),
+                                sub_items=t.get("sub_items", []),
+                                matched_issues=[
+                                    MatchedIssue(**mi)
+                                    for mi in t.get("matched_issues", [])
+                                ],
+                                match_confidence=t.get(
+                                    "match_confidence", ""
+                                ),
+                            )
+                            for t in cat.get("tasks", [])
+                        ],
+                    )
+                    for cat in sec.get("categories", [])
+                ],
+            )
+            for sec in data.get("sections", [])
+        ]
+        return cls(
+            title=data.get("title", ""),
+            period=data.get("period", ""),
+            work_days=data.get("work_days", ""),
+            members=data.get("members", ""),
+            target_velocity=data.get("target_velocity", ""),
+            sections=sections,
+        )
 
 
 # ------------------------------------------------------------------
