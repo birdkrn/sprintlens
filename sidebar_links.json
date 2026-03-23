@@ -1,0 +1,18 @@
+[
+  {
+    "name": "GM 개발 Scrum",
+    "url": "https://jira.line.games/secure/RapidBoard.jspa?projectKey=GM&rapidView=658",
+    "icon": "board"
+  },
+  {
+    "name": "Jira 프로그램팀 대시보드",
+    "url": "https://jira.line.games/secure/Dashboard.jspa?selectPageId=14701",
+    "icon": "board"
+  },
+  {
+    "name": "3월 2회차 일정 문서",
+    "url": "https://wiki.line.games/pages/viewpage.action?pageId=180506325",
+    "icon": "doc"
+  }
+
+]

@@ -129,8 +129,8 @@ def create_app() -> Flask:
         ),
         MenuItem(
             id="schedule",
-            label="프로그램팀 일정",
-            description="스프린트 및 마일스톤 일정 관리",
+            label="프로그램팀 대시보드",
+            description="프로그램팀 스프린트 일정 및 진행 현황",
             url="/schedule",
             partial_url="/partials/schedule",
         ),

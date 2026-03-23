@@ -300,6 +300,17 @@ def _parse_overview(items: list[str]) -> dict[str, str]:
     return result
 
 
+def _clean_title(title: str) -> str:
+    """Confluence 문서 제목에서 핵심 부분만 추출한다.
+
+    예: "프로그램팀 2026년 3월 2회차 일정 회의" → "프로그램팀 2026년 3월 2회차"
+    """
+    match = re.search(r"(.+\d+회차)", title)
+    if match:
+        return match.group(1)
+    return title
+
+
 def parse_schedule_html(title: str, html: str) -> SprintSchedule:
     """Confluence 스프린트 일정 HTML을 파싱한다."""
     parser = _ScheduleHTMLParser()
@@ -309,7 +320,7 @@ def parse_schedule_html(title: str, html: str) -> SprintSchedule:
     overview = _parse_overview(overview_items)
 
     schedule = SprintSchedule(
-        title=title,
+        title=_clean_title(title),
         period=overview.get("기간", ""),
         work_days=overview.get("작업일", ""),
         members=overview.get("인원", ""),

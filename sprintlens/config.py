@@ -3,6 +3,7 @@
 import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -110,8 +111,16 @@ class Config:
         return errors
 
 
+_SIDEBAR_LINKS_FILE = Path(__file__).resolve().parent.parent / "sidebar_links.json"
+
+
 def _parse_sidebar_links(raw: str) -> tuple[SidebarLink, ...]:
-    """SIDEBAR_LINKS 환경 변수(JSON 배열)를 파싱한다."""
+    """사이드바 링크를 로드한다.
+
+    우선순위: SIDEBAR_LINKS 환경변수 → sidebar_links.json 파일.
+    """
+    if not raw and _SIDEBAR_LINKS_FILE.is_file():
+        raw = _SIDEBAR_LINKS_FILE.read_text(encoding="utf-8")
     if not raw:
         return ()
     try:

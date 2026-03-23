@@ -185,8 +185,9 @@ class TestGetSprintIssues:
     """get_sprint_issues 테스트."""
 
     def test_스프린트_이슈_목록을_반환한다(self, service, mock_jira):
-        mock_jira.get_sprint_issues.return_value = {
-            "issues": [ISSUE_WITH_PARENT, ISSUE_WITHOUT_PARENT]
+        mock_jira.get.return_value = {
+            "issues": [ISSUE_WITH_PARENT, ISSUE_WITHOUT_PARENT],
+            "total": 2,
         }
 
         result = service.get_sprint_issues(883)
@@ -199,7 +200,7 @@ class TestGetSprintIssues:
         assert result[1].story_key is None
 
     def test_이슈가_없으면_빈_목록을_반환한다(self, service, mock_jira):
-        mock_jira.get_sprint_issues.return_value = {"issues": []}
+        mock_jira.get.return_value = {"issues": [], "total": 0}
 
         result = service.get_sprint_issues(883)
 
