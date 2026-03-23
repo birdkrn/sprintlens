@@ -175,6 +175,108 @@
 </div>
 {% endfor %}
 
+<!-- 번다운 차트 -->
+{% if burndown %}
+<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
+    <h3 class="text-lg font-semibold mb-4">번다운 차트</h3>
+    <div class="relative" style="height: 320px;">
+        <canvas id="burndown-chart"></canvas>
+    </div>
+</div>
+
+<script>
+(function() {
+    const ctx = document.getElementById('burndown-chart');
+    if (!ctx) return;
+
+    const labels = {{ burndown.labels | tojson }};
+    const ideal = {{ burndown.ideal | tojson }};
+    const actual = {{ burndown.actual | tojson }};
+    const todayIndex = {{ burndown.today_index | tojson }};
+
+    // 오늘 표시 플러그인
+    const todayLinePlugin = {
+        id: 'todayLine',
+        afterDraw(chart) {
+            if (todayIndex === null) return;
+            const xScale = chart.scales.x;
+            const yScale = chart.scales.y;
+            const x = xScale.getPixelForValue(todayIndex);
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x, yScale.top);
+            ctx.lineTo(x, yScale.bottom);
+            ctx.stroke();
+            // 라벨
+            ctx.fillStyle = '#F59E0B';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('오늘', x, yScale.top - 6);
+            ctx.restore();
+        }
+    };
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '이상적 번다운',
+                    data: ideal,
+                    borderColor: '#D1D5DB',
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                },
+                {
+                    label: '실제 번다운',
+                    data: actual,
+                    borderColor: '#4F46E5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#4F46E5',
+                    fill: true,
+                    tension: 0,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y + '일';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '남은 추정일' },
+                    grid: { color: '#F3F4F6' },
+                },
+            },
+        },
+        plugins: [todayLinePlugin],
+    });
+})();
+</script>
+{% endif %}
+
 {% else %}
 
 <!-- 데이터 없음 -->

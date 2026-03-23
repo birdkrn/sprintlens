@@ -55,8 +55,13 @@ class ScheduleMatcher:
             ),
         )
 
+        # issue key → resolved_date 매핑
+        issue_resolved_map = {
+            i.key: i.resolved_date for i in issues if i.resolved_date
+        }
+
         matches = self._parse_response(response.text)
-        self._apply_matches(schedule, matches)
+        self._apply_matches(schedule, matches, issue_resolved_map)
 
         matched_count = sum(
             1
@@ -126,9 +131,13 @@ class ScheduleMatcher:
 
     @staticmethod
     def _apply_matches(
-        schedule: SprintSchedule, matches: list[dict]
+        schedule: SprintSchedule,
+        matches: list[dict],
+        issue_resolved_map: dict[str, str] | None = None,
     ) -> None:
         """파싱된 매칭 결과를 SprintSchedule의 task에 적용한다."""
+        resolved_map = issue_resolved_map or {}
+
         # task title → task 객체 매핑 (빠른 검색용)
         task_map: dict[str, list] = {}
         for section in schedule.sections:
@@ -156,6 +165,9 @@ class ScheduleMatcher:
                     summary=issue.get("summary", ""),
                     status=issue.get("status", ""),
                     status_category=issue.get("status_category", ""),
+                    resolved_date=resolved_map.get(
+                        issue.get("key", "")
+                    ),
                 )
                 for issue in match.get("matched_issues", [])
                 if issue.get("key")

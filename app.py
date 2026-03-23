@@ -6,6 +6,7 @@ from pathlib import Path
 
 from flask import Flask, render_template, request
 
+from sprintlens.burndown import calculate_burndown
 from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
@@ -225,9 +226,13 @@ def create_app() -> Flask:
         sprint_schedule, updated_at = _build_schedule_cached(
             force_refresh=refresh
         )
+        burndown = None
+        if sprint_schedule:
+            burndown = calculate_burndown(sprint_schedule)
         return render_template(
             "partials/schedule.html",
             schedule=sprint_schedule,
+            burndown=burndown,
             updated_at=updated_at,
             config=config,
         )
@@ -279,7 +284,9 @@ def create_app() -> Flask:
             if schedule_matcher and jira_service:
                 sprint = jira_service.get_active_sprint()
                 if sprint:
-                    issues = jira_service.get_sprint_issues(sprint.id)
+                    issues = jira_service.get_sprint_issues(
+                        sprint.id, expand_changelog=True
+                    )
                     # 프로그램팀 멤버 이슈만 필터링
                     if config.program_team_members:
                         members = set(config.program_team_members)

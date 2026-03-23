@@ -17,6 +17,7 @@ class MatchedIssue:
     summary: str
     status: str
     status_category: str = ""  # "done", "indeterminate", "new"
+    resolved_date: str | None = None  # "YYYY-MM-DD"
 
 
 @dataclass

@@ -47,6 +47,7 @@
 
 ### API 사용 시 주의사항
 - Jira Server v8.5.7은 **REST API v2**를 사용 (Jira Cloud API v3과 다름)
+- `atlassian-python-api` 라이브러리의 래퍼 메서드가 필요한 파라미터를 지원하지 않는 경우가 있음. **이 경우 `self._jira.get(url)` 등으로 REST API를 직접 호출할 것** (예: `get_sprint_issues()`의 `expand=changelog` 미지원)
 - `atlassian-python-api` 라이브러리 사용 시 Cloud 모드가 아닌 **Server 모드**로 설정 필요
 - 사내 네트워크에서만 접근 가능하므로 VPN 또는 사내 환경 필요
 - 인증: **Basic Auth (ID/Password)** 방식 사용 (PAT 토큰 발급 불가)
@@ -78,6 +79,7 @@
 
 ### API 사용 시 주의사항
 - Confluence Server v7.4.3은 **REST API v1**을 사용 (Cloud API와 다름)
+- Jira와 동일하게 `atlassian-python-api` 라이브러리의 래퍼 메서드가 파라미터를 지원하지 않는 경우 **REST API를 직접 호출할 것**
 - `atlassian-python-api` 라이브러리 사용 시 **Server 모드**로 설정 필요
 - 사내 네트워크에서만 접근 가능
 - 인증: **Basic Auth (ID/Password)** 방식 사용 (Jira와 동일 계정)

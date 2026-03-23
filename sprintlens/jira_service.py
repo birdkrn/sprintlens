@@ -33,6 +33,7 @@ class IssueInfo:
     story_key: str | None = None
     story_summary: str | None = None
     issue_type: str = ""
+    resolved_date: str | None = None  # "YYYY-MM-DD" (done 상태 전환 날짜)
 
 
 @dataclass
@@ -120,16 +121,27 @@ class JiraService:
     # 이슈
     # ------------------------------------------------------------------
 
-    def get_sprint_issues(self, sprint_id: int) -> list[IssueInfo]:
-        """스프린트에 포함된 이슈 목록을 반환한다 (전체 페이지네이션)."""
+    def get_sprint_issues(
+        self, sprint_id: int, *, expand_changelog: bool = False
+    ) -> list[IssueInfo]:
+        """스프린트에 포함된 이슈 목록을 반환한다 (전체 페이지네이션).
+
+        Args:
+            sprint_id: 스프린트 ID.
+            expand_changelog: True이면 changelog를 포함하여 resolved_date를 추출한다.
+        """
         all_issues: list[dict] = []
         start_at = 0
         page_size = 200
 
         while True:
-            data = self._jira.get_sprint_issues(
-                sprint_id, start=start_at, limit=page_size
+            params = f"startAt={start_at}&maxResults={page_size}"
+            if expand_changelog:
+                params += "&expand=changelog"
+            url = (
+                f"rest/agile/1.0/sprint/{sprint_id}/issue?{params}"
             )
+            data = self._jira.get(url)
             issues = data.get("issues", [])
             all_issues.extend(issues)
 
@@ -193,6 +205,9 @@ class JiraService:
         status = fields["status"]
         status_category = status.get("statusCategory", {}).get("key", "")
 
+        # changelog에서 done 상태 전환 날짜 추출
+        resolved_date = _extract_resolved_date(issue)
+
         return IssueInfo(
             key=issue["key"],
             summary=fields.get("summary", ""),
@@ -204,4 +219,32 @@ class JiraService:
                 parent["fields"]["summary"] if parent else None
             ),
             issue_type=fields["issuetype"]["name"],
+            resolved_date=resolved_date,
         )
+
+
+def _extract_resolved_date(issue: dict) -> str | None:
+    """changelog에서 done 카테고리로 전환된 마지막 날짜를 추출한다.
+
+    Returns:
+        "YYYY-MM-DD" 형식 문자열 또는 None.
+    """
+    changelog = issue.get("changelog", {})
+    histories = changelog.get("histories", [])
+    if not histories:
+        return None
+
+    # done 상태: Resolved, Closed, 해결됨, 닫힘
+    done_statuses = {"resolved", "closed", "해결됨", "닫힘"}
+    resolved_date = None
+
+    for history in histories:
+        for item in history.get("items", []):
+            if item.get("field") != "status":
+                continue
+            to_status = (item.get("toString") or "").lower()
+            if to_status in done_statuses:
+                # "2026-03-18T11:14:09.123+0900" → "2026-03-18"
+                resolved_date = history["created"][:10]
+
+    return resolved_date
