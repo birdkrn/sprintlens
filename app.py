@@ -9,6 +9,7 @@ from flask import Flask, request
 from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
+from sprintlens.match_store import MatchStore
 from sprintlens.gemini_service import GeminiService
 from sprintlens.jira_service import JiraService
 from sprintlens.logging_config import get_logger, setup_logging
@@ -58,6 +59,7 @@ def create_app() -> Flask:
         ttl_minutes=config.cache_ttl_minutes,
     )
     settings_store = SettingsStore(db_path=data_dir / "settings.db")
+    match_store = MatchStore(db_path=data_dir / "matches.db")
 
     # 슬랙 스케줄러용 일정 빌더
     def _build_schedule_for_slack():
@@ -82,7 +84,12 @@ def create_app() -> Flask:
                         issues = [
                             i for i in issues if i.assignee in members
                         ]
-                    schedule_matcher.match(schedule, issues)
+                    schedule_matcher.match(
+                        schedule,
+                        issues,
+                        match_store=match_store,
+                        page_id=config.confluence_sprint_page_id,
+                    )
             return schedule
         except Exception:
             logger.exception("슬랙 리포트용 일정 빌드 실패")
@@ -153,6 +160,7 @@ def create_app() -> Flask:
         schedule_matcher=schedule_matcher,
         cache_store=cache_store,
         settings_store=settings_store,
+        match_store=match_store,
         settings_keys=SETTINGS_KEYS,
         slack_service=slack_svc,
         schedule_builder=_build_schedule_for_slack,

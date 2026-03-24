@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 from sprintlens.gemini_service import GeminiService
 from sprintlens.jira_service import IssueInfo
 from sprintlens.logging_config import get_logger
+from sprintlens.match_store import MatchStore
 from sprintlens.prompt_loader import PromptLoader
 from sprintlens.schedule_parser import (
     MatchedIssue,
@@ -31,11 +33,53 @@ class ScheduleMatcher:
         self,
         schedule: SprintSchedule,
         issues: list[IssueInfo],
+        *,
+        match_store: MatchStore | None = None,
+        page_id: str = "",
     ) -> SprintSchedule:
         """일정의 각 task에 관련 Jira 이슈를 매칭한다.
 
+        저장된 매칭이 유효하면 Gemini 호출 없이 재사용한다.
         SprintSchedule을 직접 수정(mutate)하여 반환한다.
         """
+        issue_map = {i.key: i for i in issues}
+
+        # 저장된 매칭 확인
+        if match_store and page_id:
+            schedule_hash = _compute_schedule_hash(schedule)
+            issues_hash = _compute_issues_hash(issues)
+
+            saved = match_store.get(page_id)
+            if (
+                saved
+                and saved.schedule_hash == schedule_hash
+                and saved.issues_hash == issues_hash
+            ):
+                logger.info("저장된 매칭 재사용 (page_id=%s)", page_id)
+                self._apply_saved_matches(
+                    schedule, saved.match_data, issue_map
+                )
+                return schedule
+
+        # Gemini AI 매칭
+        matches = self._match_with_gemini(schedule, issues)
+        self._apply_matches(schedule, matches, issue_map)
+
+        # 매칭 결과 저장
+        if match_store and page_id:
+            match_store.save(
+                page_id, schedule_hash, issues_hash, matches
+            )
+
+        self._log_match_stats(schedule)
+        return schedule
+
+    def _match_with_gemini(
+        self,
+        schedule: SprintSchedule,
+        issues: list[IssueInfo],
+    ) -> list[dict]:
+        """Gemini AI를 호출하여 매칭 결과를 반환한다."""
         schedule_text = self._format_schedule_tasks(schedule)
         issues_text = self._format_jira_issues(issues)
 
@@ -55,12 +99,11 @@ class ScheduleMatcher:
             ),
         )
 
-        # issue key → IssueInfo 매핑 (추가 필드 전달용)
-        issue_map = {i.key: i for i in issues}
+        return self._parse_response(response.text)
 
-        matches = self._parse_response(response.text)
-        self._apply_matches(schedule, matches, issue_map)
-
+    @staticmethod
+    def _log_match_stats(schedule: SprintSchedule) -> None:
+        """매칭 통계를 로깅한다."""
         matched_count = sum(
             1
             for sec in schedule.sections
@@ -76,7 +119,6 @@ class ScheduleMatcher:
         logger.info(
             "매칭 완료: %d/%d 일감에 Jira 이슈 매칭됨", matched_count, total_count
         )
-        return schedule
 
     @staticmethod
     def _format_schedule_tasks(schedule: SprintSchedule) -> str:
@@ -202,3 +244,102 @@ class ScheduleMatcher:
             for task in tasks:
                 task.matched_issues = matched_issues
                 task.match_confidence = confidence
+
+    @staticmethod
+    def _apply_saved_matches(
+        schedule: SprintSchedule,
+        match_data: list[dict],
+        issue_map: dict,
+    ) -> None:
+        """저장된 매칭 결과를 적용하되, Jira 최신 상태를 반영한다."""
+        # task title → task 객체 매핑
+        task_map: dict[str, list] = {}
+        for section in schedule.sections:
+            for cat in section.categories:
+                for task in cat.tasks:
+                    key = task.title.strip().lower()
+                    task_map.setdefault(key, []).append(task)
+
+        for match in match_data:
+            task_title = match.get("schedule_task", "").strip().lower()
+            tasks = task_map.get(task_title, [])
+            if not tasks:
+                for key, candidates in task_map.items():
+                    if task_title in key or key in task_title:
+                        tasks = candidates
+                        break
+
+            if not tasks:
+                continue
+
+            matched_issues = []
+            for issue_data in match.get("matched_issues", []):
+                issue_key = issue_data.get("key", "")
+                if not issue_key:
+                    continue
+                # Jira 최신 상태 우선, 없으면 저장된 데이터 사용
+                original = issue_map.get(issue_key)
+                matched_issues.append(
+                    MatchedIssue(
+                        key=issue_key,
+                        summary=(
+                            original.summary
+                            if original
+                            else issue_data.get("summary", "")
+                        ),
+                        status=(
+                            original.status
+                            if original
+                            else issue_data.get("status", "")
+                        ),
+                        status_category=(
+                            original.status_category
+                            if original
+                            else issue_data.get("status_category", "")
+                        ),
+                        icon_url=(
+                            original.icon_url if original else ""
+                        ),
+                        parent_key=(
+                            original.parent_key if original else ""
+                        ),
+                        parent_summary=(
+                            original.parent_summary if original else ""
+                        ),
+                        resolved_date=(
+                            original.resolved_date if original else None
+                        ),
+                    )
+                )
+
+            confidence = match.get("match_confidence", "")
+            for task in tasks:
+                task.matched_issues = matched_issues
+                task.match_confidence = confidence
+
+
+def _compute_schedule_hash(schedule: SprintSchedule) -> str:
+    """일정 항목의 해시를 계산한다.
+
+    task title + assignees 조합으로 해시를 생성하여
+    일정 구조 변경을 감지한다.
+    """
+    parts: list[str] = []
+    for section in schedule.sections:
+        for cat in section.categories:
+            for task in cat.tasks:
+                assignees = ",".join(sorted(task.assignees))
+                parts.append(f"{task.title}|{assignees}")
+    content = "\n".join(sorted(parts))
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def _compute_issues_hash(issues: list[IssueInfo]) -> str:
+    """Jira 이슈 목록의 해시를 계산한다.
+
+    이슈 key 목록으로 해시를 생성하여
+    이슈 추가/제거를 감지한다.
+    """
+    keys = sorted(i.key for i in issues)
+    content = "\n".join(keys)
+    return hashlib.sha256(content.encode()).hexdigest()

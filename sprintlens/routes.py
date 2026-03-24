@@ -27,6 +27,7 @@ def init_routes(
     schedule_matcher,
     cache_store,
     settings_store,
+    match_store,
     settings_keys: list[str],
     slack_service=None,
     schedule_builder=None,
@@ -247,6 +248,10 @@ def init_routes(
             if cached_data is not None:
                 return SprintSchedule.from_dict(cached_data), updated_at
 
+        # 강제 새로고침 시 저장된 매칭도 삭제하여 Gemini 재매칭 유도
+        if force_refresh and config.confluence_sprint_page_id:
+            match_store.delete(config.confluence_sprint_page_id)
+
         schedule = _build_schedule_fresh()
         if schedule is None:
             return None, None
@@ -277,7 +282,12 @@ def init_routes(
                         issues = [
                             i for i in issues if i.assignee in members
                         ]
-                    schedule_matcher.match(schedule, issues)
+                    schedule_matcher.match(
+                        schedule,
+                        issues,
+                        match_store=match_store,
+                        page_id=config.confluence_sprint_page_id,
+                    )
 
             return schedule
         except Exception:
