@@ -51,7 +51,8 @@ def create_app() -> Flask:
     schedule_matcher = _init_gemini_matcher(config)
 
     # 저장소
-    data_dir = Path(__file__).resolve().parent / "data"
+    data_dir = Path(config.data_dir)
+    data_dir.mkdir(parents=True, exist_ok=True)
     cache_store = CacheStore(
         db_path=data_dir / "cache.db",
         ttl_minutes=config.cache_ttl_minutes,

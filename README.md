@@ -18,17 +18,59 @@
 
 ## 실행 방법
 
+### 초기 설정
+
 ```bash
 # 가상환경 생성 및 의존성 설치
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
+npm install
 
 # 환경 변수 설정
 cp .env.example .env
 # .env 파일에 Jira/Confluence/Slack 접속 정보 입력
+```
 
-# 실행
+### 개발 모드
+
+운영 서비스(포트 5000)가 실행 중인 상태에서 개발할 수 있다.
+`npm run dev`를 실행하면 `.env.dev`의 설정이 우선 적용되어 **포트 5001**에서 개발 서버가 뜬다.
+
+```bash
+npm run dev    # Tailwind watch + Flask 개발 서버 (포트 5001)
+```
+
+개발 환경에서 변경되는 설정 (`.env.dev`):
+
+| 항목 | 운영 (.env) | 개발 (.env.dev) |
+|------|-------------|-----------------|
+| `FLASK_PORT` | 5000 | 5001 |
+| `FLASK_DEBUG` | false | true |
+| `SLACK_REPORT_ENABLED` | true | false |
+| `LOG_LEVEL` | INFO | DEBUG |
+
+> `.env.dev`에 없는 값은 `.env`에서 그대로 사용된다.
+
+### 배포 워크플로우
+
+운영 서비스에 코드 변경사항을 반영하는 순서:
+
+```bash
+# 1. 서비스 중지
+nssm stop SprintLens
+
+# 2. 코드 배포 (git pull, pip install 등)
+git pull
+pip install -e .
+
+# 3. 서비스 시작
+nssm start SprintLens
+```
+
+### 직접 실행 (서비스 없이)
+
+```bash
 python app.py
 ```
 

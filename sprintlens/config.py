@@ -34,6 +34,9 @@ class Config:
     flask_debug: bool = False
     flask_secret_key: str = "change-me"
 
+    # Data
+    data_dir: str = ""
+
     # Cache
     cache_ttl_minutes: int = 60
 
@@ -143,8 +146,18 @@ def _parse_sidebar_links(raw: str) -> tuple[SidebarLink, ...]:
 
 
 def load_config() -> Config:
-    """환경 변수에서 설정을 로드한다."""
-    load_dotenv()
+    """환경 변수에서 설정을 로드한다.
+
+    SPRINTLENS_ENV=dev 이면 .env.dev → .env 순서로 로드하여
+    개발용 설정이 우선 적용된다.
+    """
+    env_file = Path(__file__).resolve().parent.parent
+
+    if os.getenv("SPRINTLENS_ENV") == "dev":
+        load_dotenv(env_file / ".env.dev")
+        logger.info("개발 환경 설정 로드: .env.dev")
+
+    load_dotenv(env_file / ".env")
 
     return Config(
         log_level=os.getenv("LOG_LEVEL", "INFO"),
@@ -152,6 +165,10 @@ def load_config() -> Config:
         flask_port=int(os.getenv("FLASK_PORT", "5000")),
         flask_debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
         flask_secret_key=os.getenv("FLASK_SECRET_KEY", "change-me"),
+        data_dir=os.getenv(
+            "DATA_DIR",
+            str(Path(__file__).resolve().parent.parent / "data"),
+        ),
         cache_ttl_minutes=int(os.getenv("CACHE_TTL_MINUTES", "60")),
         settings_password=os.getenv("SETTINGS_PASSWORD", ""),
         jira_base_url=os.getenv("JIRA_BASE_URL", ""),
