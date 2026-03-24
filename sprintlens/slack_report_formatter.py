@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from sprintlens.burndown import _parse_period
 from sprintlens.schedule_parser import SprintSchedule
@@ -78,14 +78,17 @@ def format_slack_report(
 
 def _append_task_lines(
     lines: list[str],
-    tasks: list[tuple[str, list[str], bool]],
+    tasks: list[tuple[str, list[str], bool, str]],
     max_show: int,
 ) -> None:
     """작업 목록을 lines에 추가한다."""
-    for title, assignees, is_no_jira in tasks[:max_show]:
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+
+    for title, assignees, is_no_jira, resolved in tasks[:max_show]:
         names = ", ".join(assignees) if assignees else "미배정"
+        prefix = ":new: " if resolved >= yesterday else ""
         suffix = " _(Jira 미생성)_" if is_no_jira else ""
-        lines.append(f"  • {title} - {names}{suffix}")
+        lines.append(f"  • {prefix}{title} - {names}{suffix}")
     remaining = len(tasks) - max_show
     if remaining > 0:
         lines.append(f"  • ... 외 {remaining}건")
@@ -131,8 +134,11 @@ def _calc_progress(schedule: SprintSchedule) -> dict:
 def _get_tasks_by_status(
     schedule: SprintSchedule, status: str
 ) -> list[tuple[str, list[str], bool]]:
-    """상태별 작업 목록을 반환한다. (제목, 담당자, Jira미생성여부) 튜플 리스트."""
-    result: list[tuple[str, list[str], bool]] = []
+    """상태별 작업 목록을 반환한다. (제목, 담당자, Jira미생성여부) 튜플 리스트.
+
+    done 상태는 최근 완료순으로 정렬한다.
+    """
+    result: list[tuple[str, list[str], bool, str]] = []
 
     for sec in schedule.sections:
         for cat in sec.categories:
@@ -140,8 +146,25 @@ def _get_tasks_by_status(
                 task_status = _classify_task(task)
                 if task_status == status:
                     is_no_jira = task_status == "no_jira"
-                    result.append((task.title, task.assignees, is_no_jira))
-    return result
+                    # 가장 최근 resolved_date 추출
+                    resolved = ""
+                    if task.matched_issues:
+                        dates = [
+                            mi.resolved_date
+                            for mi in task.matched_issues
+                            if mi.resolved_date
+                        ]
+                        if dates:
+                            resolved = max(dates)
+                    result.append(
+                        (task.title, task.assignees, is_no_jira, resolved)
+                    )
+
+    # done 상태는 최근 완료순 (내림차순)
+    if status == "done":
+        result.sort(key=lambda x: x[3], reverse=True)
+
+    return [(t, a, n, r) for t, a, n, r in result]
 
 
 def _classify_task(task) -> str:
