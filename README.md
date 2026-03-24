@@ -138,6 +138,9 @@ nssm remove SprintLens confirm
 
 ## Docker
 
+현재는 개발자 PC에서 nssm 서비스로 직접 운영하고 있어 Docker를 사용하지 않는다.
+별도 서버(리눅스 등)로 이전하거나 동일한 환경 재현이 필요할 때 사용한다.
+
 ```bash
 docker-compose up --build
 ```
