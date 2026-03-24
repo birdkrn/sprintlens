@@ -167,10 +167,20 @@ class ScheduleMatcher:
                 matched_issues.append(
                     MatchedIssue(
                         key=issue_key,
-                        summary=issue_data.get("summary", ""),
-                        status=issue_data.get("status", ""),
-                        status_category=issue_data.get(
-                            "status_category", ""
+                        summary=(
+                            original.summary
+                            if original
+                            else issue_data.get("summary", "")
+                        ),
+                        status=(
+                            original.status
+                            if original
+                            else issue_data.get("status", "")
+                        ),
+                        status_category=(
+                            original.status_category
+                            if original
+                            else issue_data.get("status_category", "")
                         ),
                         icon_url=(
                             original.icon_url if original else ""
