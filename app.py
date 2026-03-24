@@ -1,5 +1,6 @@
 """SprintLens - 스프린트 진행상황 리포트 웹 서비스."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -102,7 +103,7 @@ def create_app() -> Flask:
         url: str
         partial_url: str
 
-    menu_items = [
+    all_menu_items = [
         MenuItem(
             id="dashboard",
             label="대시보드",
@@ -117,6 +118,14 @@ def create_app() -> Flask:
             url="/schedule",
             partial_url="/partials/schedule",
         ),
+    ]
+
+    # .env의 MENU_{ID}_ENABLED로 메뉴 노출 제어 (기본값: true)
+    menu_items = [
+        m
+        for m in all_menu_items
+        if os.getenv(f"MENU_{m.id.upper()}_ENABLED", "true").lower()
+        == "true"
     ]
     url_to_menu: dict[str, str] = {m.url: m.id for m in menu_items}
 
@@ -214,6 +223,9 @@ def _init_slack_scheduler(config, schedule_builder) -> None:
         schedule_builder=schedule_builder,
         report_time=config.slack_report_time,
         dashboard_url=config.slack_dashboard_url,
+        show_in_progress=config.slack_show_in_progress,
+        show_done=config.slack_show_done,
+        show_waiting=config.slack_show_waiting,
     )
     scheduler.start()
 

@@ -69,6 +69,9 @@ class Config:
     slack_report_time: str = "09:00"
     slack_report_enabled: bool = False
     slack_dashboard_url: str = ""
+    slack_show_in_progress: int = 99
+    slack_show_done: int = 5
+    slack_show_waiting: int = 5
 
     def validate(self) -> list[str]:
         """전체 필수 설정값 검증. 누락된 항목 목록을 반환한다."""
@@ -164,6 +167,9 @@ def load_config() -> Config:
         slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL", ""),
         slack_report_time=os.getenv("SLACK_REPORT_TIME", "09:00"),
         slack_dashboard_url=os.getenv("SLACK_DASHBOARD_URL", ""),
+        slack_show_in_progress=int(os.getenv("SLACK_SHOW_IN_PROGRESS", "99")),
+        slack_show_done=int(os.getenv("SLACK_SHOW_DONE", "5")),
+        slack_show_waiting=int(os.getenv("SLACK_SHOW_WAITING", "5")),
         program_team_members=tuple(
             name.strip()
             for name in os.getenv("PROGRAM_TEAM_MEMBERS", "").split(",")

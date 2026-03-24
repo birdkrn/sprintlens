@@ -9,7 +9,12 @@ from sprintlens.schedule_parser import SprintSchedule
 
 
 def format_slack_report(
-    schedule: SprintSchedule, *, dashboard_url: str = ""
+    schedule: SprintSchedule,
+    *,
+    dashboard_url: str = "",
+    show_in_progress: int = 99,
+    show_done: int = 5,
+    show_waiting: int = 5,
 ) -> str:
     """SprintSchedule을 슬랙 mrkdwn 메시지로 포매팅한다."""
     lines: list[str] = []
@@ -34,48 +39,29 @@ def format_slack_report(
     )
     lines.append("")
 
-    # Jira 미생성 작업
-    no_jira = _get_tasks_by_status(schedule, "no_jira")
-    if no_jira:
-        lines.append(f":warning: *Jira 미생성 작업 {len(no_jira)}건*")
-        for title, assignees in no_jira[:5]:
-            names = ", ".join(assignees) if assignees else "미배정"
-            lines.append(f"  • {title} - {names}")
-        if len(no_jira) > 5:
-            lines.append(f"  • ... 외 {len(no_jira) - 5}건")
-        lines.append("")
-
     # 진행중 작업
     in_progress = _get_tasks_by_status(schedule, "in_progress")
     if in_progress:
-        lines.append(f":arrows_counterclockwise: *진행중 작업 {len(in_progress)}건*")
-        for title, assignees in in_progress[:5]:
-            names = ", ".join(assignees) if assignees else "미배정"
-            lines.append(f"  • {title} - {names}")
-        if len(in_progress) > 5:
-            lines.append(f"  • ... 외 {len(in_progress) - 5}건")
+        lines.append(
+            f":arrows_counterclockwise: *진행중 작업 {len(in_progress)}건*"
+        )
+        _append_task_lines(lines, in_progress, show_in_progress)
         lines.append("")
 
     # 완료 작업
     done = _get_tasks_by_status(schedule, "done")
     if done:
         lines.append(f":white_check_mark: *완료 작업 {len(done)}건*")
-        for title, assignees in done[:5]:
-            names = ", ".join(assignees) if assignees else "미배정"
-            lines.append(f"  • {title} - {names}")
-        if len(done) > 5:
-            lines.append(f"  • ... 외 {len(done) - 5}건")
+        _append_task_lines(lines, done, show_done)
         lines.append("")
 
-    # 대기 작업
+    # 대기 작업 (Jira 미생성 포함)
     waiting = _get_tasks_by_status(schedule, "waiting")
-    if waiting:
-        lines.append(f":hourglass: *대기 작업 {len(waiting)}건*")
-        for title, assignees in waiting[:5]:
-            names = ", ".join(assignees) if assignees else "미배정"
-            lines.append(f"  • {title} - {names}")
-        if len(waiting) > 5:
-            lines.append(f"  • ... 외 {len(waiting) - 5}건")
+    no_jira = _get_tasks_by_status(schedule, "no_jira")
+    all_waiting = waiting + no_jira
+    if all_waiting:
+        lines.append(f":hourglass: *대기 작업 {len(all_waiting)}건*")
+        _append_task_lines(lines, all_waiting, show_waiting)
         lines.append("")
 
     # 상세 보기 링크
@@ -88,6 +74,21 @@ def format_slack_report(
 # ------------------------------------------------------------------
 # 헬퍼
 # ------------------------------------------------------------------
+
+
+def _append_task_lines(
+    lines: list[str],
+    tasks: list[tuple[str, list[str], bool]],
+    max_show: int,
+) -> None:
+    """작업 목록을 lines에 추가한다."""
+    for title, assignees, is_no_jira in tasks[:max_show]:
+        names = ", ".join(assignees) if assignees else "미배정"
+        suffix = " _(Jira 미생성)_" if is_no_jira else ""
+        lines.append(f"  • {title} - {names}{suffix}")
+    remaining = len(tasks) - max_show
+    if remaining > 0:
+        lines.append(f"  • ... 외 {remaining}건")
 
 
 def _calc_d_day(period: str) -> int | None:
@@ -129,16 +130,17 @@ def _calc_progress(schedule: SprintSchedule) -> dict:
 
 def _get_tasks_by_status(
     schedule: SprintSchedule, status: str
-) -> list[tuple[str, list[str]]]:
-    """상태별 작업 목록을 반환한다. (제목, 담당자) 튜플 리스트."""
-    result: list[tuple[str, list[str]]] = []
+) -> list[tuple[str, list[str], bool]]:
+    """상태별 작업 목록을 반환한다. (제목, 담당자, Jira미생성여부) 튜플 리스트."""
+    result: list[tuple[str, list[str], bool]] = []
 
     for sec in schedule.sections:
         for cat in sec.categories:
             for task in cat.tasks:
                 task_status = _classify_task(task)
                 if task_status == status:
-                    result.append((task.title, task.assignees))
+                    is_no_jira = task_status == "no_jira"
+                    result.append((task.title, task.assignees, is_no_jira))
     return result
 
 
@@ -147,7 +149,7 @@ def _classify_task(task) -> str:
     if not task.matched_issues:
         if task.match_confidence == "none":
             return "no_jira"
-        return "unknown"
+        return "waiting"
 
     all_done = all(
         mi.status_category == "done" for mi in task.matched_issues

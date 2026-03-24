@@ -180,7 +180,11 @@ def init_routes(
             return jsonify({"error": "스프린트 일정을 가져올 수 없습니다."}), 500
 
         text = format_slack_report(
-            schedule, dashboard_url=config.slack_dashboard_url
+            schedule,
+            dashboard_url=config.slack_dashboard_url,
+            show_in_progress=config.slack_show_in_progress,
+            show_done=config.slack_show_done,
+            show_waiting=config.slack_show_waiting,
         )
         success = slack_service.send_message(text)
         if success:

@@ -23,10 +23,16 @@ class ReportScheduler:
         *,
         report_time: str = "09:00",
         dashboard_url: str = "",
+        show_in_progress: int = 99,
+        show_done: int = 5,
+        show_waiting: int = 5,
     ) -> None:
         self._slack_service = slack_service
         self._schedule_builder = schedule_builder
         self._dashboard_url = dashboard_url
+        self._show_in_progress = show_in_progress
+        self._show_done = show_done
+        self._show_waiting = show_waiting
         self._scheduler = BackgroundScheduler(timezone="Asia/Seoul")
 
         hour, minute = report_time.split(":")
@@ -62,7 +68,11 @@ class ReportScheduler:
                 return False
 
             text = format_slack_report(
-                schedule, dashboard_url=self._dashboard_url
+                schedule,
+                dashboard_url=self._dashboard_url,
+                show_in_progress=self._show_in_progress,
+                show_done=self._show_done,
+                show_waiting=self._show_waiting,
             )
             return self._slack_service.send_message(text)
         except Exception:
