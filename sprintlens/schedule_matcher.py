@@ -177,6 +177,7 @@ class ScheduleMatcher:
     ) -> None:
         """파싱된 매칭 결과를 SprintSchedule의 task에 적용한다."""
         imap = issue_map or {}
+        used_keys: set[str] = set()
 
         # task title → task 객체 매핑 (빠른 검색용)
         task_map: dict[str, list] = {}
@@ -202,8 +203,9 @@ class ScheduleMatcher:
             matched_issues = []
             for issue_data in match.get("matched_issues", []):
                 issue_key = issue_data.get("key", "")
-                if not issue_key:
+                if not issue_key or issue_key in used_keys:
                     continue
+                used_keys.add(issue_key)
                 # Jira 원본 데이터에서 추가 필드 가져오기
                 original = imap.get(issue_key)
                 matched_issues.append(
@@ -240,6 +242,8 @@ class ScheduleMatcher:
                 )
 
             confidence = match.get("match_confidence", "")
+            if not matched_issues:
+                confidence = "none"
 
             for task in tasks:
                 task.matched_issues = matched_issues
@@ -252,6 +256,8 @@ class ScheduleMatcher:
         issue_map: dict,
     ) -> None:
         """저장된 매칭 결과를 적용하되, Jira 최신 상태를 반영한다."""
+        used_keys: set[str] = set()
+
         # task title → task 객체 매핑
         task_map: dict[str, list] = {}
         for section in schedule.sections:
@@ -275,8 +281,9 @@ class ScheduleMatcher:
             matched_issues = []
             for issue_data in match.get("matched_issues", []):
                 issue_key = issue_data.get("key", "")
-                if not issue_key:
+                if not issue_key or issue_key in used_keys:
                     continue
+                used_keys.add(issue_key)
                 # Jira 최신 상태 우선, 없으면 저장된 데이터 사용
                 original = issue_map.get(issue_key)
                 matched_issues.append(
@@ -313,6 +320,9 @@ class ScheduleMatcher:
                 )
 
             confidence = match.get("match_confidence", "")
+            if not matched_issues:
+                confidence = "none"
+
             for task in tasks:
                 task.matched_issues = matched_issues
                 task.match_confidence = confidence

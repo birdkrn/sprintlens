@@ -159,6 +159,56 @@ class TestScheduleMatcher:
         mock_prompt_loader.load.assert_called_once()
         mock_gemini.generate_content.assert_called_once()
 
+    def test_같은_이슈가_여러_작업에_중복_매칭되지_않는다(
+        self, matcher, mock_gemini, sample_issues
+    ):
+        """하나의 Jira 이슈는 하나의 작업에만 매칭되어야 한다."""
+        # GM-101이 두 작업에 모두 매칭된 Gemini 응답
+        duplicate_response = """[
+          {
+            "schedule_task": "GM 엔진 업데이트(1)",
+            "matched_issues": [{"key": "GM-101", "summary": "빌드", "status": "완료", "status_category": "done"}],
+            "match_confidence": "high"
+          },
+          {
+            "schedule_task": "GM 엔진 업데이트(2)",
+            "matched_issues": [{"key": "GM-101", "summary": "빌드", "status": "완료", "status_category": "done"}],
+            "match_confidence": "medium"
+          }
+        ]"""
+        mock_response = MagicMock()
+        mock_response.text = duplicate_response
+        mock_gemini.generate_content.return_value = mock_response
+
+        schedule = SprintSchedule(
+            title="테스트",
+            sections=[
+                ScheduleSection(
+                    name="세부 일정",
+                    categories=[
+                        ScheduleCategory(
+                            name="엔진",
+                            tasks=[
+                                ScheduleTask(title="GM 엔진 업데이트(1)", assignees=["홍길동"]),
+                                ScheduleTask(title="GM 엔진 업데이트(2)", assignees=["홍길동"]),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        )
+
+        result = matcher.match(schedule, sample_issues)
+
+        task0 = result.sections[0].categories[0].tasks[0]
+        task1 = result.sections[0].categories[0].tasks[1]
+
+        # 첫 번째 작업에만 매칭, 두 번째는 빈 목록 + "none" 표시
+        assert len(task0.matched_issues) == 1
+        assert task0.matched_issues[0].key == "GM-101"
+        assert len(task1.matched_issues) == 0
+        assert task1.match_confidence == "none"
+
     def test_빈_이슈_목록도_처리한다(self, matcher, mock_gemini, sample_schedule):
         mock_response = MagicMock()
         mock_response.text = "[]"
