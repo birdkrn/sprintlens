@@ -174,6 +174,11 @@
                                     >{{ issue.parent_key }}</a>
                                     {% endif %}
                                     <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary }}">{{ issue.summary }}</span>
+                                    <button
+                                        class="btn btn-ghost btn-xs opacity-30 hover:opacity-100 shrink-0 ml-auto"
+                                        onclick="openMoveModal('{{ issue.key }}', '{{ issue.summary | e }}')"
+                                        title="다른 작업으로 이동"
+                                    >↔</button>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -292,6 +297,11 @@
                                     >{{ issue.parent_key }}</a>
                                     {% endif %}
                                     <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary }}">{{ issue.summary }}</span>
+                                    <button
+                                        class="btn btn-ghost btn-xs opacity-30 hover:opacity-100 shrink-0 ml-auto"
+                                        onclick="openMoveModal('{{ issue.key }}', '{{ issue.summary | e }}')"
+                                        title="계획된 작업으로 이동"
+                                    >↔</button>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -411,6 +421,95 @@
 </script>
 </div>
 {% endif %}
+
+<!-- 이슈 이동 모달 -->
+<dialog id="move-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold mb-2">이슈 이동</h3>
+        <p class="text-sm text-base-content/60 mb-4">
+            <span id="move-issue-key" class="font-mono text-primary"></span>
+            <span id="move-issue-summary" class="ml-1"></span>
+        </p>
+        <div class="form-control mb-4">
+            <label class="label"><span class="label-text">대상 작업 선택</span></label>
+            <select id="move-target" class="select select-bordered w-full">
+                <option value="" disabled selected>로딩 중...</option>
+            </select>
+        </div>
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn btn-ghost btn-sm">취소</button>
+            </form>
+            <button class="btn btn-primary btn-sm" onclick="submitMoveIssue()">이동</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<script>
+(function() {
+    let currentIssueKey = '';
+
+    window.openMoveModal = function(issueKey, summary) {
+        currentIssueKey = issueKey;
+        document.getElementById('move-issue-key').textContent = issueKey;
+        document.getElementById('move-issue-summary').textContent = summary;
+
+        const select = document.getElementById('move-target');
+        select.innerHTML = '<option value="" disabled selected>로딩 중...</option>';
+
+        fetch('/api/schedule/tasks')
+            .then(r => r.json())
+            .then(data => {
+                select.innerHTML = '';
+                let currentGroup = '';
+                let optgroup = null;
+                for (const item of data.tasks) {
+                    const groupKey = (item.section || '') + '/' + item.category;
+                    if (groupKey !== currentGroup) {
+                        currentGroup = groupKey;
+                        optgroup = document.createElement('optgroup');
+                        optgroup.label = item.section === '추가된 일정'
+                            ? '추가된 일정'
+                            : item.category;
+                        select.appendChild(optgroup);
+                    }
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify({category: item.category, task: item.task});
+                    opt.textContent = item.section === '추가된 일정'
+                        ? item.category
+                        : item.task;
+                    optgroup.appendChild(opt);
+                }
+            });
+
+        document.getElementById('move-modal').showModal();
+    };
+
+    window.submitMoveIssue = function() {
+        const select = document.getElementById('move-target');
+        if (!select.value) return;
+
+        const target = JSON.parse(select.value);
+        fetch('/api/schedule/move-issue', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                issue_key: currentIssueKey,
+                target_category: target.category,
+                target_task: target.task,
+            }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('move-modal').close();
+            if (data.ok) {
+                htmx.ajax('GET', '/partials/schedule/data', {target: '#main-content'});
+            }
+        });
+    };
+})();
+</script>
 
 {% else %}
 

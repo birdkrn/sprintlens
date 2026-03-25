@@ -13,8 +13,10 @@ from sprintlens.schedule_matcher import (
     ScheduleMatcher,
     _compute_issues_hash,
     _compute_schedule_hash,
+    apply_manual_overrides,
 )
 from sprintlens.schedule_parser import (
+    MatchedIssue,
     ScheduleCategory,
     ScheduleSection,
     ScheduleTask,
@@ -459,3 +461,114 @@ class TestHashFunctions:
             sample_issues + [IssueInfo(key="GM-999", summary="새 이슈", status="열림")]
         )
         assert h1 != h2
+
+
+class TestApplyManualOverrides:
+    """수동 매칭 오버라이드 테스트."""
+
+    def _make_schedule(self):
+        return SprintSchedule(
+            title="테스트",
+            sections=[
+                ScheduleSection(
+                    name="세부 일정",
+                    categories=[
+                        ScheduleCategory(
+                            name="글로벌",
+                            tasks=[
+                                ScheduleTask(
+                                    title="빌드 작업",
+                                    matched_issues=[
+                                        MatchedIssue(
+                                            key="GM-101",
+                                            summary="빌드",
+                                            status="완료",
+                                            status_category="done",
+                                        ),
+                                    ],
+                                ),
+                            ],
+                        ),
+                        ScheduleCategory(
+                            name="개발",
+                            tasks=[
+                                ScheduleTask(title="엔진 업데이트"),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        )
+
+    def _make_issue_map(self):
+        return {
+            "GM-101": IssueInfo(
+                key="GM-101", summary="빌드", status="완료",
+                status_category="done", assignee="홍길동",
+            ),
+            "GM-200": IssueInfo(
+                key="GM-200", summary="추가 이슈", status="열림",
+                status_category="new", assignee="김철수",
+            ),
+        }
+
+    def test_이슈를_다른_작업으로_이동한다(self):
+        schedule = self._make_schedule()
+        issue_map = self._make_issue_map()
+        overrides = {"GM-101": ("개발", "엔진 업데이트")}
+
+        apply_manual_overrides(schedule, overrides, issue_map)
+
+        # 원래 작업에서 제거됨
+        build_task = schedule.sections[0].categories[0].tasks[0]
+        assert len(build_task.matched_issues) == 0
+
+        # 대상 작업에 추가됨
+        engine_task = schedule.sections[0].categories[1].tasks[0]
+        assert len(engine_task.matched_issues) == 1
+        assert engine_task.matched_issues[0].key == "GM-101"
+
+    def test_존재하지_않는_대상이면_제거만_된다(self):
+        schedule = self._make_schedule()
+        issue_map = self._make_issue_map()
+        overrides = {"GM-101": ("없는카테고리", "없는작업")}
+
+        apply_manual_overrides(schedule, overrides, issue_map)
+
+        # 원래 위치에서 제거됨 (대상이 없어서 추가는 안 됨)
+        build_task = schedule.sections[0].categories[0].tasks[0]
+        assert len(build_task.matched_issues) == 0
+
+    def test_추가된_일정으로_이동하면_제거만_된다(self):
+        """category == task인 경우 (추가된 일정) → 제거만 하고 추가 안 함."""
+        schedule = self._make_schedule()
+        issue_map = self._make_issue_map()
+        overrides = {"GM-101": ("홍길동의 작업", "홍길동의 작업")}
+
+        apply_manual_overrides(schedule, overrides, issue_map)
+
+        # 원래 위치에서 제거됨
+        build_task = schedule.sections[0].categories[0].tasks[0]
+        assert len(build_task.matched_issues) == 0
+
+        # 어떤 계획된 작업에도 추가되지 않음
+        engine_task = schedule.sections[0].categories[1].tasks[0]
+        assert len(engine_task.matched_issues) == 0
+
+    def test_빈_오버라이드는_아무것도_변경하지_않는다(self):
+        schedule = self._make_schedule()
+        issue_map = self._make_issue_map()
+
+        apply_manual_overrides(schedule, {}, issue_map)
+
+        build_task = schedule.sections[0].categories[0].tasks[0]
+        assert len(build_task.matched_issues) == 1
+
+    def test_issue_map에_없는_이슈는_무시한다(self):
+        schedule = self._make_schedule()
+        overrides = {"GM-999": ("개발", "엔진 업데이트")}
+
+        apply_manual_overrides(schedule, overrides, {})
+
+        engine_task = schedule.sections[0].categories[1].tasks[0]
+        assert len(engine_task.matched_issues) == 0

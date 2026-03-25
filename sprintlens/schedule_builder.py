@@ -1,12 +1,13 @@
 """스프린트 일정 빌드 공통 모듈.
 
-Confluence 일정 파싱 → Jira 이슈 매칭 → 추가 일정 섹션 생성을
+Confluence 일정 파싱 → Jira 이슈 매칭 → 수동 오버라이드 → 추가 일정 섹션 생성을
 하나의 함수로 통합한다. routes.py와 app.py에서 공통으로 사용한다.
 """
 
 from __future__ import annotations
 
 from sprintlens.logging_config import get_logger
+from sprintlens.schedule_matcher import apply_manual_overrides
 from sprintlens.schedule_parser import SprintSchedule, parse_schedule_html
 from sprintlens.unmatched_issues import build_unmatched_section, collect_matched_keys
 
@@ -20,6 +21,7 @@ def build_schedule(
     jira_service=None,
     schedule_matcher=None,
     match_store=None,
+    manual_match_store=None,
     program_team_members: tuple[str, ...] = (),
 ) -> SprintSchedule | None:
     """Confluence 일정을 가져와 파싱하고, Jira 이슈를 AI로 매칭한다.
@@ -30,6 +32,7 @@ def build_schedule(
         jira_service: Jira API 클라이언트 (선택).
         schedule_matcher: AI 매칭 서비스 (선택).
         match_store: 매칭 결과 저장소 (선택).
+        manual_match_store: 수동 매칭 오버라이드 저장소 (선택).
         program_team_members: 프로그램팀 멤버 필터 (선택).
 
     Returns:
@@ -60,6 +63,16 @@ def build_schedule(
                     page_id=page_id,
                 )
 
+                # 수동 오버라이드 적용
+                if manual_match_store:
+                    overrides = manual_match_store.get_overrides(page_id)
+                    if overrides:
+                        issue_map = {i.key: i for i in issues}
+                        apply_manual_overrides(
+                            schedule, overrides, issue_map
+                        )
+
+                # 추가된 일정 섹션 빌드 (오버라이드 반영 후)
                 matched_keys = collect_matched_keys(schedule)
                 unmatched_section = build_unmatched_section(
                     issues, matched_keys

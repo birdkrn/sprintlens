@@ -9,6 +9,7 @@ from flask import Flask, request
 from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
+from sprintlens.manual_match_store import ManualMatchStore
 from sprintlens.match_store import MatchStore
 from sprintlens.schedule_builder import build_schedule
 from sprintlens.gemini_service import GeminiService
@@ -61,6 +62,9 @@ def create_app() -> Flask:
     )
     settings_store = SettingsStore(db_path=data_dir / "settings.db")
     match_store = MatchStore(db_path=data_dir / "matches.db")
+    manual_match_store = ManualMatchStore(
+        db_path=data_dir / "manual_matches.db"
+    )
 
     # 슬랙 스케줄러용 일정 빌더
     def _build_schedule_for_slack():
@@ -71,6 +75,7 @@ def create_app() -> Flask:
             jira_service=jira_service,
             schedule_matcher=schedule_matcher,
             match_store=match_store,
+            manual_match_store=manual_match_store,
             program_team_members=config.program_team_members,
         )
 
@@ -140,6 +145,7 @@ def create_app() -> Flask:
         cache_store=cache_store,
         settings_store=settings_store,
         match_store=match_store,
+        manual_match_store=manual_match_store,
         settings_keys=SETTINGS_KEYS,
         slack_service=slack_svc,
         schedule_builder=_build_schedule_for_slack,

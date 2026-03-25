@@ -7,10 +7,13 @@ from datetime import datetime
 from flask import Blueprint, jsonify, render_template, request
 
 from sprintlens.burndown import calculate_burndown
+from sprintlens.jira_service import IssueInfo
 from sprintlens.logging_config import get_logger
 from sprintlens.schedule_builder import build_schedule
+from sprintlens.schedule_matcher import apply_manual_overrides
 from sprintlens.schedule_parser import SprintSchedule
 from sprintlens.slack_report_formatter import format_slack_report
+from sprintlens.unmatched_issues import ADDED_SECTION_NAME
 
 logger = get_logger(__name__)
 
@@ -29,6 +32,7 @@ def init_routes(
     cache_store,
     settings_store,
     match_store,
+    manual_match_store,
     settings_keys: list[str],
     slack_service=None,
     schedule_builder=None,
@@ -236,6 +240,142 @@ def init_routes(
             ],
         }
 
+    @api.route("/schedule/tasks")
+    def api_schedule_tasks():
+        """매칭 이동 모달용 작업 목록 API."""
+        schedule, _ = _build_schedule_cached()
+        if not schedule:
+            return jsonify({"error": "일정을 불러올 수 없습니다."}), 404
+
+        tasks_list = []
+        for section in schedule.sections:
+            if section.name == ADDED_SECTION_NAME:
+                # 추가된 일정은 담당자 카테고리 단위로 표시
+                for cat in section.categories:
+                    tasks_list.append({
+                        "section": ADDED_SECTION_NAME,
+                        "category": cat.name,
+                        "task": cat.name,
+                    })
+            else:
+                for cat in section.categories:
+                    for task in cat.tasks:
+                        tasks_list.append({
+                            "section": section.name,
+                            "category": cat.name,
+                            "task": task.title,
+                        })
+        return jsonify({"tasks": tasks_list})
+
+    @api.route("/schedule/move-issue", methods=["POST"])
+    def api_move_issue():
+        """이슈를 다른 작업으로 수동 이동한다."""
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "요청 데이터가 없습니다."}), 400
+
+        issue_key = data.get("issue_key", "")
+        target_category = data.get("target_category", "")
+        target_task = data.get("target_task", "")
+
+        if not issue_key or not target_category or not target_task:
+            return jsonify({"error": "필수 항목이 누락되었습니다."}), 400
+
+        page_id = config.confluence_sprint_page_id
+        if not page_id:
+            return jsonify({"error": "페이지 ID가 설정되지 않았습니다."}), 503
+
+        manual_match_store.set_override(
+            page_id, issue_key, target_category, target_task
+        )
+        # 캐시된 스케줄에 오버라이드만 적용하여 즉시 갱신 (전체 리빌드 방지)
+        _refresh_cache_with_overrides()
+        return jsonify({"ok": True})
+
+    @api.route("/schedule/move-issue", methods=["DELETE"])
+    def api_remove_move():
+        """이슈의 수동 이동을 해제한다."""
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "요청 데이터가 없습니다."}), 400
+
+        issue_key = data.get("issue_key", "")
+        if not issue_key:
+            return jsonify({"error": "issue_key가 필요합니다."}), 400
+
+        page_id = config.confluence_sprint_page_id
+        if not page_id:
+            return jsonify({"error": "페이지 ID가 설정되지 않았습니다."}), 503
+
+        manual_match_store.remove_override(page_id, issue_key)
+        _refresh_cache_with_overrides()
+        return jsonify({"ok": True})
+
+    def _refresh_cache_with_overrides() -> None:
+        """캐시된 스케줄에 수동 오버라이드를 재적용하여 즉시 갱신한다.
+
+        전체 리빌드(Confluence/Jira/Gemini API 호출) 없이
+        캐시된 데이터에 오버라이드만 반영하여 빠르게 갱신한다.
+        """
+        cached_data, _ = cache_store.get(schedule_cache_key)
+        if cached_data is None:
+            return
+
+        schedule = SprintSchedule.from_dict(cached_data)
+        page_id = config.confluence_sprint_page_id
+
+        # 이슈 정보 수집 (추가된 일정 포함, 삭제 전에 수집)
+        issue_map = _collect_issue_map_from_schedule(schedule)
+
+        # 기존 "추가된 일정" 섹션 제거 (재생성할 것이므로)
+        schedule.sections = [
+            s for s in schedule.sections if s.name != ADDED_SECTION_NAME
+        ]
+
+        # 수동 오버라이드 적용
+        overrides = manual_match_store.get_overrides(page_id)
+        if overrides:
+            apply_manual_overrides(schedule, overrides, issue_map)
+
+        # "추가된 일정" 섹션 재생성
+        from sprintlens.unmatched_issues import (
+            build_unmatched_section,
+            collect_matched_keys,
+        )
+
+        matched_keys = collect_matched_keys(schedule)
+        all_issues = list(issue_map.values())
+        unmatched_section = build_unmatched_section(all_issues, matched_keys)
+        if unmatched_section:
+            schedule.sections.append(unmatched_section)
+
+        # 캐시 재저장
+        cache_store.set(schedule_cache_key, schedule.to_dict())
+
+    def _collect_issue_map_from_schedule(
+        schedule: SprintSchedule,
+    ) -> dict[str, IssueInfo]:
+        """캐시된 스케줄의 MatchedIssue에서 IssueInfo 맵을 추출한다."""
+        issue_map: dict[str, IssueInfo] = {}
+        for section in schedule.sections:
+            for cat in section.categories:
+                for task in cat.tasks:
+                    # task의 담당자 정보를 이슈에 반영
+                    assignee = task.assignees[0] if task.assignees else None
+                    for mi in task.matched_issues:
+                        issue_map[mi.key] = IssueInfo(
+                            key=mi.key,
+                            summary=mi.summary,
+                            status=mi.status,
+                            status_category=mi.status_category,
+                            assignee=assignee,
+                            icon_url=mi.icon_url,
+                            parent_key=mi.parent_key,
+                            parent_summary=mi.parent_summary,
+                            resolved_date=mi.resolved_date,
+                        )
+        return issue_map
+
     # ------------------------------------------------------------------
     # 헬퍼 (라우트에서 사용)
     # ------------------------------------------------------------------
@@ -270,6 +410,7 @@ def init_routes(
             jira_service=jira_service,
             schedule_matcher=schedule_matcher,
             match_store=match_store,
+            manual_match_store=manual_match_store,
             program_team_members=config.program_team_members,
         )
 

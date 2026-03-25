@@ -245,6 +245,72 @@ def _apply_match_data(
             task.match_confidence = confidence
 
 
+def apply_manual_overrides(
+    schedule: SprintSchedule,
+    overrides: dict[str, tuple[str, str]],
+    issue_map: dict[str, IssueInfo],
+) -> None:
+    """수동 오버라이드를 schedule에 적용한다.
+
+    1. 오버라이드된 이슈를 현재 위치에서 제거
+    2. 대상 task에 추가 (Jira 최신 상태 반영)
+    존재하지 않는 대상 task는 무시한다.
+    """
+    if not overrides:
+        return
+
+    # (category_name, task_title) → task 객체 매핑
+    task_lookup: dict[tuple[str, str], list] = {}
+    for section in schedule.sections:
+        for cat in section.categories:
+            for task in cat.tasks:
+                key = (cat.name, task.title)
+                task_lookup.setdefault(key, []).append(task)
+
+    for issue_key, (target_cat, target_task_title) in overrides.items():
+        original = issue_map.get(issue_key)
+        if not original:
+            continue
+
+        # 1. 모든 task에서 해당 이슈 제거
+        for section in schedule.sections:
+            for cat in section.categories:
+                for task in cat.tasks:
+                    task.matched_issues = [
+                        mi for mi in task.matched_issues
+                        if mi.key != issue_key
+                    ]
+
+        # "추가된 일정" 카테고리로 이동 = 제거만 (build_unmatched_section이 자동 표시)
+        if target_cat == target_task_title:
+            continue
+
+        # 2. 대상 task에 추가
+        target_key = (target_cat, target_task_title)
+        target_tasks = task_lookup.get(target_key)
+        if not target_tasks:
+            logger.warning(
+                "수동 매칭 대상 없음: %s → %s/%s",
+                issue_key, target_cat, target_task_title,
+            )
+            continue
+
+        new_issue = MatchedIssue(
+            key=issue_key,
+            summary=original.summary,
+            status=original.status,
+            status_category=original.status_category,
+            icon_url=original.icon_url,
+            parent_key=original.parent_key,
+            parent_summary=original.parent_summary,
+            resolved_date=original.resolved_date,
+        )
+        for task in target_tasks:
+            task.matched_issues.append(new_issue)
+
+    logger.info("수동 오버라이드 %d건 적용", len(overrides))
+
+
 def _compute_schedule_hash(schedule: SprintSchedule) -> str:
     """일정 항목의 해시를 계산한다.
 
