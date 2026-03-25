@@ -10,7 +10,7 @@ from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
 from sprintlens.match_store import MatchStore
-from sprintlens.unmatched_issues import build_unmatched_section, collect_matched_keys
+from sprintlens.schedule_builder import build_schedule
 from sprintlens.gemini_service import GeminiService
 from sprintlens.jira_service import JiraService
 from sprintlens.logging_config import get_logger, setup_logging
@@ -65,43 +65,14 @@ def create_app() -> Flask:
     # 슬랙 스케줄러용 일정 빌더
     def _build_schedule_for_slack():
         """슬랙 리포트용 스프린트 일정을 빌드한다."""
-        if not confluence_service or not config.confluence_sprint_page_id:
-            return None
-        try:
-            from sprintlens.schedule_parser import parse_schedule_html
-
-            page = confluence_service.get_page(
-                config.confluence_sprint_page_id
-            )
-            schedule = parse_schedule_html(page.title, page.body_html)
-            if schedule_matcher and jira_service:
-                sprint = jira_service.get_active_sprint()
-                if sprint:
-                    issues = jira_service.get_sprint_issues(
-                        sprint.id, expand_changelog=True
-                    )
-                    if config.program_team_members:
-                        members = set(config.program_team_members)
-                        issues = [
-                            i for i in issues if i.assignee in members
-                        ]
-                    schedule_matcher.match(
-                        schedule,
-                        issues,
-                        match_store=match_store,
-                        page_id=config.confluence_sprint_page_id,
-                    )
-
-                    matched_keys = collect_matched_keys(schedule)
-                    unmatched_section = build_unmatched_section(
-                        issues, matched_keys
-                    )
-                    if unmatched_section:
-                        schedule.sections.append(unmatched_section)
-            return schedule
-        except Exception:
-            logger.exception("슬랙 리포트용 일정 빌드 실패")
-            return None
+        return build_schedule(
+            confluence_service=confluence_service,
+            page_id=config.confluence_sprint_page_id,
+            jira_service=jira_service,
+            schedule_matcher=schedule_matcher,
+            match_store=match_store,
+            program_team_members=config.program_team_members,
+        )
 
     _init_slack_scheduler(config, _build_schedule_for_slack)
 

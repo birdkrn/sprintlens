@@ -196,41 +196,60 @@ class JiraService:
     # ------------------------------------------------------------------
 
     def _parse_issues(self, issues: list[dict]) -> list[IssueInfo]:
-        """이슈 목록을 IssueInfo 리스트로 변환한다."""
-        return [self._parse_issue(issue) for issue in issues]
+        """이슈 목록을 IssueInfo 리스트로 변환한다.
+
+        파싱 실패한 이슈는 건너뛴다.
+        """
+        result: list[IssueInfo] = []
+        for issue in issues:
+            parsed = self._parse_issue(issue)
+            if parsed:
+                result.append(parsed)
+        return result
 
     @staticmethod
-    def _parse_issue(issue: dict) -> IssueInfo:
-        """단일 이슈 딕셔너리를 IssueInfo로 변환한다."""
-        fields = issue["fields"]
-        assignee = fields.get("assignee")
-        parent = fields.get("parent")
-        status = fields["status"]
-        status_category = status.get("statusCategory", {}).get("key", "")
+    def _parse_issue(issue: dict) -> IssueInfo | None:
+        """단일 이슈 딕셔너리를 IssueInfo로 변환한다.
 
-        # changelog에서 done 상태 전환 날짜 추출
-        resolved_date = _extract_resolved_date(issue)
+        필수 필드가 누락되면 None을 반환한다.
+        """
+        try:
+            fields = issue.get("fields")
+            if not fields:
+                logger.warning("이슈 필드 누락: %s", issue.get("key"))
+                return None
 
-        issuetype = fields["issuetype"]
+            status = fields.get("status") or {}
+            issuetype = fields.get("issuetype") or {}
+            assignee = fields.get("assignee")
+            parent = fields.get("parent")
+            status_category = (
+                status.get("statusCategory", {}).get("key", "")
+            )
 
-        return IssueInfo(
-            key=issue["key"],
-            summary=fields.get("summary", ""),
-            status=status["name"],
-            status_category=status_category,
-            assignee=assignee["displayName"] if assignee else None,
-            story_key=parent["key"] if parent else None,
-            story_summary=(
-                parent["fields"]["summary"] if parent else None
-            ),
-            issue_type=issuetype["name"],
-            icon_url=issuetype.get("iconUrl", ""),
-            parent_key=parent["key"] if parent else "",
-            parent_summary=(
-                parent["fields"]["summary"] if parent else ""
-            ),
-            resolved_date=resolved_date,
-        )
+            resolved_date = _extract_resolved_date(issue)
+
+            return IssueInfo(
+                key=issue.get("key", ""),
+                summary=fields.get("summary", ""),
+                status=status.get("name", ""),
+                status_category=status_category,
+                assignee=assignee["displayName"] if assignee else None,
+                story_key=parent["key"] if parent else None,
+                story_summary=(
+                    parent["fields"]["summary"] if parent else None
+                ),
+                issue_type=issuetype.get("name", ""),
+                icon_url=issuetype.get("iconUrl", ""),
+                parent_key=parent["key"] if parent else "",
+                parent_summary=(
+                    parent["fields"]["summary"] if parent else ""
+                ),
+                resolved_date=resolved_date,
+            )
+        except (KeyError, TypeError) as e:
+            logger.warning("이슈 파싱 실패 %s: %s", issue.get("key"), e)
+            return None
 
 
 def _extract_resolved_date(issue: dict) -> str | None:

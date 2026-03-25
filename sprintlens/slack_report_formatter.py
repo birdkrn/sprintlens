@@ -143,10 +143,12 @@ def _calc_progress(schedule: SprintSchedule) -> dict:
 
 def _get_tasks_by_status(
     schedule: SprintSchedule, status: str
-) -> list[tuple[str, list[str], bool]]:
-    """상태별 작업 목록을 반환한다. (제목, 담당자, Jira미생성여부) 튜플 리스트.
+) -> list[tuple[str, list[str], bool, str]]:
+    """상태별 작업 목록을 반환한다.
 
-    done 상태는 최근 완료순으로 정렬한다.
+    Returns:
+        (제목, 담당자, Jira미생성여부, resolved_date) 튜플 리스트.
+        done 상태는 최근 완료순으로 정렬한다.
     """
     result: list[tuple[str, list[str], bool, str]] = []
 

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-import sqlite3
-import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from sprintlens.base_store import BaseStore
 from sprintlens.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +26,7 @@ class SavedMatch:
     updated_at: datetime
 
 
-class MatchStore:
+class MatchStore(BaseStore):
     """AI 매칭 결과를 영구 저장하는 SQLite 저장소.
 
     매칭(task → issue keys 연결)은 스프린트 내에서 거의 변경되지 않으므로,
@@ -35,30 +34,19 @@ class MatchStore:
     """
 
     def __init__(self, db_path: Path) -> None:
-        self._db_path = db_path
-        self._lock = threading.Lock()
-        self._init_db()
+        super().__init__(db_path)
         logger.info("MatchStore 초기화 완료 (DB: %s)", db_path)
 
-    def _init_db(self) -> None:
-        """매칭 테이블을 생성한다."""
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS matches (
-                    page_id TEXT PRIMARY KEY,
-                    schedule_hash TEXT NOT NULL,
-                    issues_hash TEXT NOT NULL,
-                    match_data TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
-                """
+    def _schema_sql(self) -> str:
+        return """
+            CREATE TABLE IF NOT EXISTS matches (
+                page_id TEXT PRIMARY KEY,
+                schedule_hash TEXT NOT NULL,
+                issues_hash TEXT NOT NULL,
+                match_data TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             )
-
-    def _connect(self) -> sqlite3.Connection:
-        """SQLite 연결을 생성한다."""
-        return sqlite3.connect(str(self._db_path))
+        """
 
     def get(self, page_id: str) -> SavedMatch | None:
         """저장된 매칭 결과를 조회한다."""

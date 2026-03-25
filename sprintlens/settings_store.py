@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import sqlite3
-import threading
 from pathlib import Path
 
+from sprintlens.base_store import BaseStore
 from sprintlens.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-class SettingsStore:
+class SettingsStore(BaseStore):
     """SQLite3 기반 키-값 설정 저장소.
 
     웹 UI에서 변경 가능한 설정을 관리한다.
@@ -19,27 +18,16 @@ class SettingsStore:
     """
 
     def __init__(self, db_path: Path) -> None:
-        self._db_path = db_path
-        self._lock = threading.Lock()
-        self._init_db()
+        super().__init__(db_path)
         logger.info("SettingsStore 초기화 완료 (DB: %s)", db_path)
 
-    def _init_db(self) -> None:
-        """설정 테이블을 생성한다."""
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                )
-                """
+    def _schema_sql(self) -> str:
+        return """
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             )
-
-    def _connect(self) -> sqlite3.Connection:
-        """SQLite 연결을 생성한다."""
-        return sqlite3.connect(str(self._db_path))
+        """
 
     def get(self, key: str, default: str = "") -> str:
         """설정값을 조회한다."""

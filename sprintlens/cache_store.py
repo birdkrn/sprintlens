@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-import sqlite3
-import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from sprintlens.base_store import BaseStore
 from sprintlens.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -15,7 +14,7 @@ logger = get_logger(__name__)
 KST = timezone(timedelta(hours=9))
 
 
-class CacheStore:
+class CacheStore(BaseStore):
     """SQLite3 기반 키-값 캐시 저장소.
 
     TTL(Time To Live) 기반으로 캐시를 관리한다.
@@ -23,33 +22,22 @@ class CacheStore:
     """
 
     def __init__(self, db_path: Path, ttl_minutes: int = 60) -> None:
-        self._db_path = db_path
         self._ttl_minutes = ttl_minutes
-        self._lock = threading.Lock()
-        self._init_db()
+        super().__init__(db_path)
         logger.info(
             "CacheStore 초기화 완료 (DB: %s, TTL: %d분)",
             db_path,
             ttl_minutes,
         )
 
-    def _init_db(self) -> None:
-        """캐시 테이블을 생성한다."""
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS cache (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
-                """
+    def _schema_sql(self) -> str:
+        return """
+            CREATE TABLE IF NOT EXISTS cache (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             )
-
-    def _connect(self) -> sqlite3.Connection:
-        """SQLite 연결을 생성한다."""
-        return sqlite3.connect(str(self._db_path))
+        """
 
     def get(self, key: str) -> tuple[dict | list | None, datetime | None]:
         """캐시에서 값을 조회한다.
@@ -60,10 +48,10 @@ class CacheStore:
             (데이터, 업데이트시각) 튜플. 캐시 미스 시 (None, None).
         """
         with self._lock, self._connect() as conn:
-                row = conn.execute(
-                    "SELECT value, updated_at FROM cache WHERE key = ?",
-                    (key,),
-                ).fetchone()
+            row = conn.execute(
+                "SELECT value, updated_at FROM cache WHERE key = ?",
+                (key,),
+            ).fetchone()
 
         if not row:
             return None, None
@@ -93,13 +81,13 @@ class CacheStore:
         serialized = json.dumps(value, ensure_ascii=False)
 
         with self._lock, self._connect() as conn:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO cache (key, value, updated_at)
-                    VALUES (?, ?, ?)
-                    """,
-                    (key, serialized, now.isoformat()),
-                )
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO cache (key, value, updated_at)
+                VALUES (?, ?, ?)
+                """,
+                (key, serialized, now.isoformat()),
+            )
 
         logger.info("캐시 저장: %s (%d bytes)", key, len(serialized))
         return now
@@ -107,5 +95,5 @@ class CacheStore:
     def invalidate(self, key: str) -> None:
         """특정 키의 캐시를 삭제한다."""
         with self._lock, self._connect() as conn:
-                conn.execute("DELETE FROM cache WHERE key = ?", (key,))
+            conn.execute("DELETE FROM cache WHERE key = ?", (key,))
         logger.info("캐시 삭제: %s", key)

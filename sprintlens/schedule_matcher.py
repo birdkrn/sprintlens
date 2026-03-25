@@ -56,14 +56,12 @@ class ScheduleMatcher:
                 and saved.issues_hash == issues_hash
             ):
                 logger.info("저장된 매칭 재사용 (page_id=%s)", page_id)
-                self._apply_saved_matches(
-                    schedule, saved.match_data, issue_map
-                )
+                _apply_match_data(schedule, saved.match_data, issue_map)
                 return schedule
 
         # Gemini AI 매칭
         matches = self._match_with_gemini(schedule, issues)
-        self._apply_matches(schedule, matches, issue_map)
+        _apply_match_data(schedule, matches, issue_map)
 
         # 매칭 결과 저장
         if match_store and page_id:
@@ -169,163 +167,82 @@ class ScheduleMatcher:
             logger.warning("Gemini 응답 JSON 파싱 실패: %s...", cleaned[:200])
         return []
 
-    @staticmethod
-    def _apply_matches(
-        schedule: SprintSchedule,
-        matches: list[dict],
-        issue_map: dict | None = None,
-    ) -> None:
-        """파싱된 매칭 결과를 SprintSchedule의 task에 적용한다."""
-        imap = issue_map or {}
-        used_keys: set[str] = set()
+def _apply_match_data(
+    schedule: SprintSchedule,
+    matches: list[dict],
+    issue_map: dict,
+) -> None:
+    """매칭 결과를 SprintSchedule의 task에 적용한다.
 
-        # task title → task 객체 매핑 (빠른 검색용)
-        task_map: dict[str, list] = {}
-        for section in schedule.sections:
-            for cat in section.categories:
-                for task in cat.tasks:
-                    key = task.title.strip().lower()
-                    task_map.setdefault(key, []).append(task)
+    Jira 원본 데이터가 있으면 최신 상태를 우선 사용한다.
+    동일 이슈가 여러 task에 중복 매칭되지 않도록 방지한다.
+    """
+    used_keys: set[str] = set()
 
-        for match in matches:
-            task_title = match.get("schedule_task", "").strip().lower()
-            tasks = task_map.get(task_title, [])
-            if not tasks:
-                # 부분 매칭 시도
-                for key, candidates in task_map.items():
-                    if task_title in key or key in task_title:
-                        tasks = candidates
-                        break
+    # task title → task 객체 매핑 (빠른 검색용)
+    task_map: dict[str, list] = {}
+    for section in schedule.sections:
+        for cat in section.categories:
+            for task in cat.tasks:
+                key = task.title.strip().lower()
+                task_map.setdefault(key, []).append(task)
 
-            if not tasks:
+    for match in matches:
+        task_title = match.get("schedule_task", "").strip().lower()
+        tasks = task_map.get(task_title, [])
+        if not tasks:
+            # 부분 매칭 시도
+            for key, candidates in task_map.items():
+                if task_title in key or key in task_title:
+                    tasks = candidates
+                    break
+
+        if not tasks:
+            continue
+
+        matched_issues = []
+        for issue_data in match.get("matched_issues", []):
+            issue_key = issue_data.get("key", "")
+            if not issue_key or issue_key in used_keys:
                 continue
-
-            matched_issues = []
-            for issue_data in match.get("matched_issues", []):
-                issue_key = issue_data.get("key", "")
-                if not issue_key or issue_key in used_keys:
-                    continue
-                used_keys.add(issue_key)
-                # Jira 원본 데이터에서 추가 필드 가져오기
-                original = imap.get(issue_key)
-                matched_issues.append(
-                    MatchedIssue(
-                        key=issue_key,
-                        summary=(
-                            original.summary
-                            if original
-                            else issue_data.get("summary", "")
-                        ),
-                        status=(
-                            original.status
-                            if original
-                            else issue_data.get("status", "")
-                        ),
-                        status_category=(
-                            original.status_category
-                            if original
-                            else issue_data.get("status_category", "")
-                        ),
-                        icon_url=(
-                            original.icon_url if original else ""
-                        ),
-                        parent_key=(
-                            original.parent_key if original else ""
-                        ),
-                        parent_summary=(
-                            original.parent_summary if original else ""
-                        ),
-                        resolved_date=(
-                            original.resolved_date if original else None
-                        ),
-                    )
+            used_keys.add(issue_key)
+            original = issue_map.get(issue_key)
+            matched_issues.append(
+                MatchedIssue(
+                    key=issue_key,
+                    summary=(
+                        original.summary
+                        if original
+                        else issue_data.get("summary", "")
+                    ),
+                    status=(
+                        original.status
+                        if original
+                        else issue_data.get("status", "")
+                    ),
+                    status_category=(
+                        original.status_category
+                        if original
+                        else issue_data.get("status_category", "")
+                    ),
+                    icon_url=original.icon_url if original else "",
+                    parent_key=original.parent_key if original else "",
+                    parent_summary=(
+                        original.parent_summary if original else ""
+                    ),
+                    resolved_date=(
+                        original.resolved_date if original else None
+                    ),
                 )
+            )
 
-            confidence = match.get("match_confidence", "")
-            if not matched_issues:
-                confidence = "none"
+        confidence = match.get("match_confidence", "")
+        if not matched_issues:
+            confidence = "none"
 
-            for task in tasks:
-                task.matched_issues = matched_issues
-                task.match_confidence = confidence
-
-    @staticmethod
-    def _apply_saved_matches(
-        schedule: SprintSchedule,
-        match_data: list[dict],
-        issue_map: dict,
-    ) -> None:
-        """저장된 매칭 결과를 적용하되, Jira 최신 상태를 반영한다."""
-        used_keys: set[str] = set()
-
-        # task title → task 객체 매핑
-        task_map: dict[str, list] = {}
-        for section in schedule.sections:
-            for cat in section.categories:
-                for task in cat.tasks:
-                    key = task.title.strip().lower()
-                    task_map.setdefault(key, []).append(task)
-
-        for match in match_data:
-            task_title = match.get("schedule_task", "").strip().lower()
-            tasks = task_map.get(task_title, [])
-            if not tasks:
-                for key, candidates in task_map.items():
-                    if task_title in key or key in task_title:
-                        tasks = candidates
-                        break
-
-            if not tasks:
-                continue
-
-            matched_issues = []
-            for issue_data in match.get("matched_issues", []):
-                issue_key = issue_data.get("key", "")
-                if not issue_key or issue_key in used_keys:
-                    continue
-                used_keys.add(issue_key)
-                # Jira 최신 상태 우선, 없으면 저장된 데이터 사용
-                original = issue_map.get(issue_key)
-                matched_issues.append(
-                    MatchedIssue(
-                        key=issue_key,
-                        summary=(
-                            original.summary
-                            if original
-                            else issue_data.get("summary", "")
-                        ),
-                        status=(
-                            original.status
-                            if original
-                            else issue_data.get("status", "")
-                        ),
-                        status_category=(
-                            original.status_category
-                            if original
-                            else issue_data.get("status_category", "")
-                        ),
-                        icon_url=(
-                            original.icon_url if original else ""
-                        ),
-                        parent_key=(
-                            original.parent_key if original else ""
-                        ),
-                        parent_summary=(
-                            original.parent_summary if original else ""
-                        ),
-                        resolved_date=(
-                            original.resolved_date if original else None
-                        ),
-                    )
-                )
-
-            confidence = match.get("match_confidence", "")
-            if not matched_issues:
-                confidence = "none"
-
-            for task in tasks:
-                task.matched_issues = matched_issues
-                task.match_confidence = confidence
+        for task in tasks:
+            task.matched_issues = matched_issues
+            task.match_confidence = confidence
 
 
 def _compute_schedule_hash(schedule: SprintSchedule) -> str:
