@@ -16,6 +16,15 @@ logger = get_logger(__name__)
 
 ADDED_SECTION_NAME = "추가된 일정"
 
+# 이슈 상태별 정렬 우선순위 (낮을수록 먼저 표시)
+_STATUS_ORDER: dict[str, int] = {
+    "작업 중": 0,
+    "열림": 1,
+    "다시 열림": 2,
+    "해결됨": 3,
+    "닫힘": 4,
+}
+
 
 def collect_matched_keys(schedule: SprintSchedule) -> set[str]:
     """schedule에서 매칭된 모든 issue key를 수집한다."""
@@ -48,6 +57,10 @@ def build_unmatched_section(
 
     categories: list[ScheduleCategory] = []
     for assignee in sorted(by_assignee):
+        sorted_issues = sorted(
+            by_assignee[assignee],
+            key=lambda i: _STATUS_ORDER.get(i.status, 99),
+        )
         tasks = [
             ScheduleTask(
                 title=issue.summary,
@@ -66,7 +79,7 @@ def build_unmatched_section(
                 ],
                 match_confidence="high",
             )
-            for issue in by_assignee[assignee]
+            for issue in sorted_issues
         ]
         category_name = f"{assignee}의 작업" if assignee != "미배정" else "미배정 작업"
         categories.append(ScheduleCategory(name=category_name, tasks=tasks))

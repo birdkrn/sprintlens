@@ -126,3 +126,18 @@ class TestBuildUnmatchedSection:
     def test_빈_이슈_목록이면_None을_반환한다(self):
         section = build_unmatched_section([], set())
         assert section is None
+
+    def test_이슈를_상태별로_정렬한다(self):
+        """작업 중 → 열림 → 다시 열림 → 해결됨 → 닫힘 순으로 정렬."""
+        issues = [
+            IssueInfo(key="A-1", summary="닫힌 이슈", status="닫힘", assignee="홍길동"),
+            IssueInfo(key="A-2", summary="작업 중 이슈", status="작업 중", assignee="홍길동"),
+            IssueInfo(key="A-3", summary="해결된 이슈", status="해결됨", assignee="홍길동"),
+            IssueInfo(key="A-4", summary="열린 이슈", status="열림", assignee="홍길동"),
+        ]
+        section = build_unmatched_section(issues, set())
+
+        assert section is not None
+        tasks = section.categories[0].tasks
+        statuses = [t.matched_issues[0].status for t in tasks]
+        assert statuses == ["작업 중", "열림", "해결됨", "닫힘"]
