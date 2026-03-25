@@ -10,6 +10,7 @@ from sprintlens.burndown import calculate_burndown
 from sprintlens.logging_config import get_logger
 from sprintlens.schedule_parser import SprintSchedule, parse_schedule_html
 from sprintlens.slack_report_formatter import format_slack_report
+from sprintlens.unmatched_issues import build_unmatched_section, collect_matched_keys
 
 logger = get_logger(__name__)
 
@@ -288,6 +289,14 @@ def init_routes(
                         match_store=match_store,
                         page_id=config.confluence_sprint_page_id,
                     )
+
+                    # 매칭되지 않은 이슈를 "추가된 일정" 섹션으로 추가
+                    matched_keys = collect_matched_keys(schedule)
+                    unmatched_section = build_unmatched_section(
+                        issues, matched_keys
+                    )
+                    if unmatched_section:
+                        schedule.sections.append(unmatched_section)
 
             return schedule
         except Exception:

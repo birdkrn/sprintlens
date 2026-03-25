@@ -10,6 +10,7 @@ from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
 from sprintlens.match_store import MatchStore
+from sprintlens.unmatched_issues import build_unmatched_section, collect_matched_keys
 from sprintlens.gemini_service import GeminiService
 from sprintlens.jira_service import JiraService
 from sprintlens.logging_config import get_logger, setup_logging
@@ -90,6 +91,13 @@ def create_app() -> Flask:
                         match_store=match_store,
                         page_id=config.confluence_sprint_page_id,
                     )
+
+                    matched_keys = collect_matched_keys(schedule)
+                    unmatched_section = build_unmatched_section(
+                        issues, matched_keys
+                    )
+                    if unmatched_section:
+                        schedule.sections.append(unmatched_section)
             return schedule
         except Exception:
             logger.exception("슬랙 리포트용 일정 빌드 실패")

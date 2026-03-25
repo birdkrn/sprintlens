@@ -8,6 +8,7 @@ from datetime import date, timedelta
 
 from sprintlens.logging_config import get_logger
 from sprintlens.schedule_parser import SprintSchedule
+from sprintlens.unmatched_issues import ADDED_SECTION_NAME
 
 logger = get_logger(__name__)
 
@@ -90,6 +91,8 @@ def calculate_burndown(schedule: SprintSchedule) -> BurndownData | None:
     # task별 완료 날짜 수집
     completed: list[tuple[date, float]] = []  # (완료일, 추정일)
     for section in schedule.sections:
+        if section.name == ADDED_SECTION_NAME:
+            continue
         for cat in section.categories:
             for task in cat.tasks:
                 if not task.matched_issues:

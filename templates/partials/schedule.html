@@ -57,7 +57,7 @@
 <div class="mb-8">
     <h3 class="text-lg font-bold mb-4">계획된 일정</h3>
 {% for section in schedule.sections %}
-
+    {% if section.name != '추가된 일정' %}
     {% for cat in section.categories %}
     <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-4">
         <div class="flex items-center justify-between mb-4">
@@ -190,8 +190,123 @@
         </div>
     </div>
     {% endfor %}
+    {% endif %}
 {% endfor %}
 </div>
+
+<!-- 추가된 일정 -->
+{% for section in schedule.sections %}
+{% if section.name == '추가된 일정' %}
+<div class="mb-8">
+    <h3 class="text-lg font-bold mb-4">추가된 일정</h3>
+    {% for cat in section.categories %}
+    <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold text-base">{{ cat.name }}</h4>
+            <span class="badge badge-sm badge-outline">{{ cat.tasks | length }}건</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="table table-sm table-fixed">
+                <colgroup>
+                    <col style="width: 40px">
+                    <col style="width: 28%">
+                    <col style="width: 90px">
+                    <col>
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>진행</th>
+                        <th>작업</th>
+                        <th>담당자</th>
+                        <th>Jira 이슈</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in cat.tasks %}
+                    <tr class="hover">
+                        <!-- 진행 상태 아이콘 -->
+                        <td class="text-center">
+                            {% if task.matched_issues %}
+                                {% set all_done = task.matched_issues | selectattr('status_category', 'equalto', 'done') | list | length == task.matched_issues | length %}
+                                {% set any_progress = task.matched_issues | selectattr('status_category', 'equalto', 'indeterminate') | list | length > 0 %}
+                                {% if all_done %}
+                                <div class="tooltip" data-tip="완료">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-success inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                {% elif any_progress %}
+                                <div class="tooltip" data-tip="진행중">
+                                    <span class="loading loading-ring loading-xs text-info"></span>
+                                </div>
+                                {% else %}
+                                <div class="tooltip" data-tip="대기">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+
+                        <!-- 일감 제목 -->
+                        <td>
+                            <div class="text-sm">{{ task.title }}</div>
+                        </td>
+
+                        <!-- 담당자 -->
+                        <td>
+                            {% for name in task.assignees %}
+                            <span class="badge badge-primary badge-xs">{{ name }}</span>
+                            {% endfor %}
+                        </td>
+
+                        <!-- Jira 이슈 -->
+                        <td>
+                            {% if task.matched_issues %}
+                            <div class="flex flex-col gap-1.5">
+                                {% for issue in task.matched_issues %}
+                                <div class="flex items-center gap-1.5 text-xs">
+                                    {% if issue.icon_url %}
+                                    <img src="{{ issue.icon_url }}" alt="" class="h-3.5 w-3.5 shrink-0">
+                                    {% endif %}
+                                    {% if issue.status_category == 'done' %}
+                                    <span class="badge badge-success badge-xs shrink-0">{{ issue.status }}</span>
+                                    {% elif issue.status_category == 'indeterminate' %}
+                                    <span class="badge badge-info badge-xs shrink-0">{{ issue.status }}</span>
+                                    {% else %}
+                                    <span class="badge badge-ghost badge-xs shrink-0">{{ issue.status }}</span>
+                                    {% endif %}
+                                    <a
+                                        href="{{ config.jira_base_url }}/browse/{{ issue.key }}"
+                                        target="_blank"
+                                        class="link link-primary font-mono shrink-0"
+                                    >{{ issue.key }}</a>
+                                    {% if issue.parent_key %}
+                                    <span class="text-base-content/40 shrink-0">/</span>
+                                    <a
+                                        href="{{ config.jira_base_url }}/browse/{{ issue.parent_key }}"
+                                        target="_blank"
+                                        class="link link-secondary font-mono shrink-0 text-[10px]"
+                                    >{{ issue.parent_key }}</a>
+                                    {% endif %}
+                                    <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary }}">{{ issue.summary }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endfor %}
 
 <!-- 번다운 차트 -->
 {% if burndown %}

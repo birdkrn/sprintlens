@@ -6,6 +6,7 @@ from datetime import date, timedelta
 
 from sprintlens.burndown import _parse_period
 from sprintlens.schedule_parser import SprintSchedule
+from sprintlens.unmatched_issues import ADDED_SECTION_NAME
 
 
 def format_slack_report(
@@ -64,6 +65,13 @@ def format_slack_report(
         _append_task_lines(lines, all_waiting, show_waiting)
         lines.append("")
 
+    # 추가된 일정
+    added = _get_added_tasks(schedule)
+    if added:
+        lines.append(f":heavy_plus_sign: *추가된 일정 {len(added)}건*")
+        _append_task_lines(lines, added, show_in_progress)
+        lines.append("")
+
     # 상세 보기 링크
     if dashboard_url:
         lines.append(f":link: <{dashboard_url}|상세 보기>")
@@ -104,12 +112,14 @@ def _calc_d_day(period: str) -> int | None:
 
 
 def _calc_progress(schedule: SprintSchedule) -> dict:
-    """작업 진행률 통계를 계산한다."""
+    """작업 진행률 통계를 계산한다 (추가된 일정 제외)."""
     total_count = 0
     done_count = 0
     done_estimate = 0.0
 
     for sec in schedule.sections:
+        if sec.name == ADDED_SECTION_NAME:
+            continue
         for cat in sec.categories:
             for task in cat.tasks:
                 total_count += 1
@@ -141,6 +151,8 @@ def _get_tasks_by_status(
     result: list[tuple[str, list[str], bool, str]] = []
 
     for sec in schedule.sections:
+        if sec.name == ADDED_SECTION_NAME:
+            continue
         for cat in sec.categories:
             for task in cat.tasks:
                 task_status = _classify_task(task)
@@ -165,6 +177,31 @@ def _get_tasks_by_status(
         result.sort(key=lambda x: x[3], reverse=True)
 
     return [(t, a, n, r) for t, a, n, r in result]
+
+
+def _get_added_tasks(
+    schedule: SprintSchedule,
+) -> list[tuple[str, list[str], bool, str]]:
+    """추가된 일정 섹션의 작업 목록을 반환한다."""
+    result: list[tuple[str, list[str], bool, str]] = []
+    for sec in schedule.sections:
+        if sec.name != ADDED_SECTION_NAME:
+            continue
+        for cat in sec.categories:
+            for task in cat.tasks:
+                resolved = ""
+                if task.matched_issues:
+                    dates = [
+                        mi.resolved_date
+                        for mi in task.matched_issues
+                        if mi.resolved_date
+                    ]
+                    if dates:
+                        resolved = max(dates)
+                result.append(
+                    (task.title, task.assignees, False, resolved)
+                )
+    return result
 
 
 def _classify_task(task) -> str:
