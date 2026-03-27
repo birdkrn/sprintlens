@@ -43,6 +43,7 @@ class ReportScheduler:
             minute=int(minute),
             day_of_week="mon-fri",
             id="daily_slack_report",
+            misfire_grace_time=300,  # 5분 이내 지연은 실행
         )
 
     def start(self) -> None:

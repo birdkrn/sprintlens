@@ -75,6 +75,13 @@ class SprintSchedule:
         )
 
     @property
+    def remaining_estimate(self) -> float:
+        """완료되지 않은 작업의 추정일 합계를 반환한다."""
+        from sprintlens.burndown import calc_done_estimate
+
+        return self.total_estimate - calc_done_estimate(self)
+
+    @property
     def all_assignees(self) -> list[str]:
         """모든 담당자 목록 (중복 제거, 정렬)."""
         names: set[str] = set()

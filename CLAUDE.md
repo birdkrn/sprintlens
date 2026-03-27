@@ -256,3 +256,36 @@ ruff format --check .       # 포매팅 검사만
 docker-compose up --build
 ```
 
+## gstack
+
+웹 브라우징이 필요한 경우 반드시 gstack의 `/browse` skill을 사용하세요. `mcp__claude-in-chrome__*` 도구는 절대 사용하지 마세요.
+
+### 사용 가능한 skill 목록
+- `/office-hours` — 오피스 아워
+- `/plan-ceo-review` — CEO 리뷰 계획
+- `/plan-eng-review` — 엔지니어링 리뷰 계획
+- `/plan-design-review` — 디자인 리뷰 계획
+- `/design-consultation` — 디자인 상담
+- `/review` — 코드 리뷰
+- `/ship` — 코드 배포
+- `/land-and-deploy` — 랜딩 및 배포
+- `/canary` — 카나리 배포
+- `/benchmark` — 벤치마크
+- `/browse` — 웹 브라우징 (모든 웹 브라우징에 이 skill 사용)
+- `/qa` — QA
+- `/qa-only` — QA 전용
+- `/design-review` — 디자인 리뷰
+- `/setup-browser-cookies` — 브라우저 쿠키 설정
+- `/setup-deploy` — 배포 설정
+- `/retro` — 회고
+- `/investigate` — 조사
+- `/document-release` — 릴리스 문서화
+- `/codex` — Codex
+- `/cso` — CSO
+- `/autoplan` — 자동 계획
+- `/careful` — 신중 모드
+- `/freeze` — 프리즈
+- `/guard` — 가드
+- `/unfreeze` — 언프리즈
+- `/gstack-upgrade` — gstack 업그레이드
+

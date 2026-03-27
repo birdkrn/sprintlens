@@ -260,10 +260,12 @@ def init_routes(
             else:
                 for cat in section.categories:
                     for task in cat.tasks:
+                        assignees = ", ".join(task.assignees) if task.assignees else ""
                         tasks_list.append({
                             "section": section.name,
                             "category": cat.name,
                             "task": task.title,
+                            "assignees": assignees,
                         })
         return jsonify({"tasks": tasks_list})
 

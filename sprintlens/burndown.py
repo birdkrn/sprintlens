@@ -59,6 +59,26 @@ def _get_workdays(start: date, end: date) -> list[date]:
     return days
 
 
+def calc_done_estimate(schedule: SprintSchedule) -> float:
+    """완료된 작업의 추정일 합계를 반환한다.
+
+    "추가된 일정" 섹션은 제외하며,
+    모든 매칭 이슈가 done인 task만 완료로 판단한다.
+    """
+    done = 0.0
+    for sec in schedule.sections:
+        if sec.name == ADDED_SECTION_NAME:
+            continue
+        for cat in sec.categories:
+            for task in cat.tasks:
+                if task.matched_issues and all(
+                    mi.status_category == "done"
+                    for mi in task.matched_issues
+                ):
+                    done += task.estimate_days
+    return done
+
+
 def calculate_burndown(schedule: SprintSchedule) -> BurndownData | None:
     """SprintSchedule에서 번다운 차트 데이터를 계산한다.
 

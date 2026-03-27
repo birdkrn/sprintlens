@@ -42,8 +42,8 @@
     </div>
     {% endif %}
     <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
-        <div class="stat-title">총 추정일</div>
-        <div class="stat-value text-info text-2xl">{{ "%.1f"|format(schedule.total_estimate) }}일</div>
+        <div class="stat-title">추정일 (남은/전체)</div>
+        <div class="stat-value text-info text-2xl">{{ "%.1f"|format(schedule.remaining_estimate) }} / {{ "%.1f"|format(schedule.total_estimate) }}일</div>
     </div>
     {% if schedule.target_velocity %}
     <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
@@ -476,9 +476,13 @@
                     }
                     const opt = document.createElement('option');
                     opt.value = JSON.stringify({category: item.category, task: item.task});
-                    opt.textContent = item.section === '추가된 일정'
-                        ? item.category
-                        : item.task;
+                    if (item.section === '추가된 일정') {
+                        opt.textContent = item.category;
+                    } else {
+                        opt.textContent = item.assignees
+                            ? item.task + ' - ' + item.assignees
+                            : item.task;
+                    }
                     optgroup.appendChild(opt);
                 }
             });
