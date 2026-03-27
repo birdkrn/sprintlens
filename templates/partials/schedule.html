@@ -127,7 +127,7 @@
 
                         <!-- 일감 제목 -->
                         <td>
-                            <div class="text-sm">{{ task.title }}</div>
+                            <div class="text-sm">📒 {{ task.title | e }}</div>
                             {% if task.sub_items %}
                             <ul class="mt-1 ml-3 text-xs text-base-content/50 list-disc">
                                 {% for sub in task.sub_items %}
@@ -173,10 +173,10 @@
                                         class="link link-secondary font-mono shrink-0 text-[10px]"
                                     >{{ issue.parent_key }}</a>
                                     {% endif %}
-                                    <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary }}">{{ issue.summary }}</span>
+                                    <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary | e }}">{{ issue.summary | e }}</span>
                                     <button
                                         class="btn btn-ghost btn-xs opacity-30 hover:opacity-100 shrink-0 ml-auto"
-                                        onclick="openMoveModal('{{ issue.key }}', '{{ issue.summary | e }}')"
+                                        onclick="openMoveModal({{ issue.key | tojson }}, {{ issue.summary | tojson }})"
                                         title="다른 작업으로 이동"
                                     >↔</button>
                                 </div>
@@ -257,7 +257,7 @@
 
                         <!-- 일감 제목 -->
                         <td>
-                            <div class="text-sm">{{ task.title }}</div>
+                            <div class="text-sm">{{ task.title | e }}</div>
                         </td>
 
                         <!-- 담당자 -->
@@ -296,10 +296,10 @@
                                         class="link link-secondary font-mono shrink-0 text-[10px]"
                                     >{{ issue.parent_key }}</a>
                                     {% endif %}
-                                    <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary }}">{{ issue.summary }}</span>
+                                    <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary | e }}">{{ issue.summary | e }}</span>
                                     <button
                                         class="btn btn-ghost btn-xs opacity-30 hover:opacity-100 shrink-0 ml-auto"
-                                        onclick="openMoveModal('{{ issue.key }}', '{{ issue.summary | e }}')"
+                                        onclick="openMoveModal({{ issue.key | tojson }}, {{ issue.summary | tojson }})"
                                         title="계획된 작업으로 이동"
                                     >↔</button>
                                 </div>
