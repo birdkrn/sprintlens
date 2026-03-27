@@ -250,13 +250,7 @@ def init_routes(
         tasks_list = []
         for section in schedule.sections:
             if section.name == ADDED_SECTION_NAME:
-                # 추가된 일정은 담당자 카테고리 단위로 표시
-                for cat in section.categories:
-                    tasks_list.append({
-                        "section": ADDED_SECTION_NAME,
-                        "category": cat.name,
-                        "task": cat.name,
-                    })
+                continue
             else:
                 for cat in section.categories:
                     for task in cat.tasks:
@@ -267,6 +261,15 @@ def init_routes(
                             "task": task.title,
                             "assignees": assignees,
                         })
+        # 추가된 일정: 프로그램팀 전체 멤버를 대상으로 표시
+        for member in sorted(config.program_team_members):
+            cat_name = f"{member}의 작업"
+            tasks_list.append({
+                "section": ADDED_SECTION_NAME,
+                "category": cat_name,
+                "task": cat_name,
+            })
+
         return jsonify({"tasks": tasks_list})
 
     @api.route("/schedule/move-issue", methods=["POST"])

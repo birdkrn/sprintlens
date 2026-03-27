@@ -176,7 +176,7 @@
                                     <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary | e }}">{{ issue.summary | e }}</span>
                                     <button
                                         class="btn btn-ghost btn-xs opacity-30 hover:opacity-100 shrink-0 ml-auto"
-                                        onclick="openMoveModal({{ issue.key | tojson }}, {{ issue.summary | tojson }})"
+                                        onclick='openMoveModal({{ issue.key | tojson }}, {{ issue.summary | tojson }})'
                                         title="다른 작업으로 이동"
                                     >↔</button>
                                 </div>
@@ -299,7 +299,7 @@
                                     <span class="text-base-content/60 truncate max-w-96" title="{{ issue.summary | e }}">{{ issue.summary | e }}</span>
                                     <button
                                         class="btn btn-ghost btn-xs opacity-30 hover:opacity-100 shrink-0 ml-auto"
-                                        onclick="openMoveModal({{ issue.key | tojson }}, {{ issue.summary | tojson }})"
+                                        onclick='openMoveModal({{ issue.key | tojson }}, {{ issue.summary | tojson }})'
                                         title="계획된 작업으로 이동"
                                     >↔</button>
                                 </div>
