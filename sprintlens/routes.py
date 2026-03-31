@@ -39,9 +39,18 @@ def init_routes(
 ) -> None:
     """라우트를 Flask 앱에 등록한다."""
 
-    schedule_cache_key = (
-        f"schedule:{config.confluence_sprint_page_id}"
-    )
+    def _get_setting(key: str) -> str:
+        """DB 설정값을 우선 사용하고, 없으면 config 폴백."""
+        db_val = settings_store.get(key)
+        if db_val:
+            return db_val
+        env_val = getattr(config, key, "")
+        if isinstance(env_val, tuple):
+            return ",".join(env_val)
+        return str(env_val)
+
+    def _schedule_cache_key() -> str:
+        return f"schedule:{_get_setting('confluence_sprint_page_id')}"
 
     # ------------------------------------------------------------------
     # 페이지 라우트
@@ -169,7 +178,7 @@ def init_routes(
         }
         if to_save:
             settings_store.set_many(to_save)
-            cache_store.invalidate(schedule_cache_key)
+            cache_store.invalidate(_schedule_cache_key())
 
         return jsonify({"ok": True, "saved": list(to_save.keys())})
 
@@ -286,7 +295,7 @@ def init_routes(
         if not issue_key or not target_category or not target_task:
             return jsonify({"error": "필수 항목이 누락되었습니다."}), 400
 
-        page_id = config.confluence_sprint_page_id
+        page_id = _get_setting("confluence_sprint_page_id")
         if not page_id:
             return jsonify({"error": "페이지 ID가 설정되지 않았습니다."}), 503
 
@@ -308,7 +317,7 @@ def init_routes(
         if not issue_key:
             return jsonify({"error": "issue_key가 필요합니다."}), 400
 
-        page_id = config.confluence_sprint_page_id
+        page_id = _get_setting("confluence_sprint_page_id")
         if not page_id:
             return jsonify({"error": "페이지 ID가 설정되지 않았습니다."}), 503
 
@@ -322,12 +331,12 @@ def init_routes(
         전체 리빌드(Confluence/Jira/Gemini API 호출) 없이
         캐시된 데이터에 오버라이드만 반영하여 빠르게 갱신한다.
         """
-        cached_data, _ = cache_store.get(schedule_cache_key)
+        cached_data, _ = cache_store.get(_schedule_cache_key())
         if cached_data is None:
             return
 
         schedule = SprintSchedule.from_dict(cached_data)
-        page_id = config.confluence_sprint_page_id
+        page_id = _get_setting("confluence_sprint_page_id")
 
         # 이슈 정보 수집 (추가된 일정 포함, 삭제 전에 수집)
         issue_map = _collect_issue_map_from_schedule(schedule)
@@ -355,7 +364,7 @@ def init_routes(
             schedule.sections.append(unmatched_section)
 
         # 캐시 재저장
-        cache_store.set(schedule_cache_key, schedule.to_dict())
+        cache_store.set(_schedule_cache_key(), schedule.to_dict())
 
     def _collect_issue_map_from_schedule(
         schedule: SprintSchedule,
@@ -389,34 +398,37 @@ def init_routes(
         *, force_refresh: bool = False
     ) -> tuple[SprintSchedule | None, datetime | None]:
         """캐시를 활용하여 스프린트 일정을 반환한다."""
+        cache_key = _schedule_cache_key()
         if not force_refresh:
-            cached_data, updated_at = cache_store.get(schedule_cache_key)
+            cached_data, updated_at = cache_store.get(cache_key)
             if cached_data is not None:
                 return SprintSchedule.from_dict(cached_data), updated_at
 
         # 강제 새로고침 시 저장된 매칭도 삭제하여 Gemini 재매칭 유도
-        if force_refresh and config.confluence_sprint_page_id:
-            match_store.delete(config.confluence_sprint_page_id)
+        page_id = _get_setting("confluence_sprint_page_id")
+        if force_refresh and page_id:
+            match_store.delete(page_id)
 
         schedule = _build_schedule_fresh()
         if schedule is None:
             return None, None
 
-        updated_at = cache_store.set(
-            schedule_cache_key, schedule.to_dict()
-        )
+        updated_at = cache_store.set(cache_key, schedule.to_dict())
         return schedule, updated_at
 
     def _build_schedule_fresh() -> SprintSchedule | None:
         """Confluence 일정을 가져와 파싱하고, Jira 이슈를 AI로 매칭한다."""
+        page_id = _get_setting("confluence_sprint_page_id")
+        members = _get_setting("program_team_members")
+        team_members = tuple(m.strip() for m in members.split(",") if m.strip()) if members else config.program_team_members
         return build_schedule(
             confluence_service=confluence_service,
-            page_id=config.confluence_sprint_page_id,
+            page_id=page_id,
             jira_service=jira_service,
             schedule_matcher=schedule_matcher,
             match_store=match_store,
             manual_match_store=manual_match_store,
-            program_team_members=config.program_team_members,
+            program_team_members=team_members,
         )
 
     def _build_dashboard_report():
