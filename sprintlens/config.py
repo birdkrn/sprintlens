@@ -50,6 +50,9 @@ class Config:
     jira_board_id: str = ""
     jira_project_key: str = ""
 
+    # QA_GMG Jira (기존 Jira 서버 공유, project_key만 다름)
+    qa_gmg_jira_project_key: str = ""
+
     # Confluence
     confluence_base_url: str = ""
     confluence_username: str = ""
@@ -93,6 +96,13 @@ class Config:
             errors.append("JIRA_BOARD_ID")
         if not self.jira_project_key:
             errors.append("JIRA_PROJECT_KEY")
+        return errors
+
+    def validate_qa_gmg_jira(self) -> list[str]:
+        """QA_GMG Jira 관련 필수 설정값 검증."""
+        errors: list[str] = []
+        if not self.qa_gmg_jira_project_key:
+            errors.append("QA_GMG_JIRA_PROJECT_KEY")
         return errors
 
     def validate_confluence(self) -> list[str]:
@@ -176,6 +186,7 @@ def load_config() -> Config:
         jira_password=os.getenv("JIRA_PASSWORD", ""),
         jira_board_id=os.getenv("JIRA_BOARD_ID", ""),
         jira_project_key=os.getenv("JIRA_PROJECT_KEY", ""),
+        qa_gmg_jira_project_key=os.getenv("QA_GMG_JIRA_PROJECT_KEY", ""),
         confluence_base_url=os.getenv("CONFLUENCE_BASE_URL", ""),
         confluence_username=os.getenv("CONFLUENCE_USERNAME", ""),
         confluence_password=os.getenv("CONFLUENCE_PASSWORD", ""),

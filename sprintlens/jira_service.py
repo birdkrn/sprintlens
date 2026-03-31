@@ -57,11 +57,15 @@ class JiraService:
     """
 
     def __init__(
-        self, base_url: str, username: str, password: str, board_id: str
+        self,
+        base_url: str,
+        username: str,
+        password: str,
+        board_id: str = "",
     ) -> None:
         self._jira = Jira(url=base_url, username=username, password=password)
         self._board_id = board_id
-        logger.info("JiraService 초기화 완료 (보드 ID: %s)", board_id)
+        logger.info("JiraService 초기화 완료 (보드 ID: %s)", board_id or "없음")
 
     # ------------------------------------------------------------------
     # 프로젝트

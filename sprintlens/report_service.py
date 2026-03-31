@@ -138,6 +138,41 @@ class ReportService:
             for key, group in sorted(groups.items())
         ]
 
+    def generate_project_report(self, project_key: str) -> SprintReport | None:
+        """프로젝트 키 기반으로 전체 이슈 리포트를 생성한다.
+
+        스프린트 보드가 없는 프로젝트(예: QA)용으로,
+        JQL로 프로젝트의 모든 미완료+최근완료 이슈를 조회한다.
+        """
+        jql = (
+            f"project = {project_key} "
+            "ORDER BY status ASC, updated DESC"
+        )
+        issues = self._jira.search_issues(jql)
+        if not issues:
+            return None
+
+        sprint_placeholder = SprintInfo(
+            id=0,
+            name=f"{project_key} 이슈 현황",
+            state="active",
+        )
+        by_assignee = self._group_by_assignee(issues)
+        by_story = self._group_by_story(issues)
+
+        report = SprintReport(
+            sprint=sprint_placeholder,
+            issues=issues,
+            by_assignee=by_assignee,
+            by_story=by_story,
+        )
+        logger.info(
+            "프로젝트 리포트 생성 완료: %s (이슈 %d건)",
+            project_key,
+            report.total_issues,
+        )
+        return report
+
     def format_slack_report(self, report: SprintReport) -> str:
         """슬랙 발송용 텍스트 리포트를 생성한다."""
         lines: list[str] = []

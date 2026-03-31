@@ -1,0 +1,60 @@
+<!-- QA_GMG 대시보드: 로딩 화면 → 데이터 비동기 로드 -->
+<div class="mb-6">
+    <h2 class="text-2xl font-bold">QA_GMG 대시보드</h2>
+    <p class="text-sm text-base-content/60 mt-1">QA_GMG 스프린트 현황을 불러오는 중입니다</p>
+</div>
+
+<div
+    hx-get="/partials/qa-gmg/data"
+    hx-trigger="load, intersect once"
+    hx-target="#main-content"
+>
+    <div class="flex flex-col items-center justify-center min-h-[50vh] gap-6">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+        <div class="text-center">
+            <p id="loading-message" class="text-base-content/70 font-medium">
+                QA_GMG 스프린트 정보를 조회하는 중...
+            </p>
+            <p class="text-xs text-base-content/40 mt-2">
+                이슈 수에 따라 약 5~10초가 소요될 수 있습니다
+            </p>
+        </div>
+
+        <!-- 단계별 진행 표시 -->
+        <div class="steps steps-vertical lg:steps-horizontal text-xs mt-4">
+            <div id="step-sprint" class="step step-primary">스프린트 조회</div>
+            <div id="step-issues" class="step">이슈 수집</div>
+            <div id="step-report" class="step">리포트 생성</div>
+            <div id="step-done" class="step">완료</div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const messages = [
+        { time: 0,    msg: "QA_GMG 스프린트 정보를 조회하는 중...", step: "step-sprint" },
+        { time: 2000, msg: "스프린트 이슈를 수집하는 중...", step: "step-issues" },
+        { time: 6000, msg: "리포트를 생성하는 중...", step: "step-report" },
+    ];
+
+    const msgEl = document.getElementById("loading-message");
+    const timers = [];
+
+    messages.forEach(({ time, msg, step }) => {
+        const timer = setTimeout(() => {
+            if (msgEl) msgEl.textContent = msg;
+            const stepEl = document.getElementById(step);
+            if (stepEl && !stepEl.classList.contains("step-primary")) {
+                stepEl.classList.add("step-primary");
+            }
+        }, time);
+        timers.push(timer);
+    });
+
+    document.body.addEventListener("htmx:afterRequest", function cleanup() {
+        timers.forEach(clearTimeout);
+        document.body.removeEventListener("htmx:afterRequest", cleanup);
+    });
+})();
+</script>

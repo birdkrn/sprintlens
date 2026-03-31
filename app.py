@@ -9,15 +9,15 @@ from flask import Flask, request
 from sprintlens.cache_store import CacheStore
 from sprintlens.config import load_config
 from sprintlens.confluence_service import ConfluenceService
-from sprintlens.manual_match_store import ManualMatchStore
-from sprintlens.match_store import MatchStore
-from sprintlens.schedule_builder import build_schedule
 from sprintlens.gemini_service import GeminiService
 from sprintlens.jira_service import JiraService
 from sprintlens.logging_config import get_logger, setup_logging
+from sprintlens.manual_match_store import ManualMatchStore
+from sprintlens.match_store import MatchStore
 from sprintlens.prompt_loader import PromptLoader
 from sprintlens.report_service import ReportService
 from sprintlens.routes import init_routes
+from sprintlens.schedule_builder import build_schedule
 from sprintlens.schedule_matcher import ScheduleMatcher
 from sprintlens.scheduler import ReportScheduler
 from sprintlens.settings_store import SettingsStore
@@ -50,6 +50,8 @@ def create_app() -> Flask:
     # ------------------------------------------------------------------
     jira_service = _init_jira(config)
     report_service = ReportService(jira_service=jira_service) if jira_service else None
+    qa_gmg_jira_service = _init_qa_gmg_jira(config)
+    qa_gmg_report_service = ReportService(jira_service=qa_gmg_jira_service) if qa_gmg_jira_service else None
     confluence_service = _init_confluence(config)
     schedule_matcher = _init_gemini_matcher(config)
 
@@ -110,6 +112,13 @@ def create_app() -> Flask:
             url="/schedule",
             partial_url="/partials/schedule",
         ),
+        MenuItem(
+            id="qa_gmg",
+            label="QA_GMG 대시보드",
+            description="QA_GMG 스프린트 현황 및 일감 진행률",
+            url="/qa-gmg",
+            partial_url="/partials/qa-gmg",
+        ),
     ]
 
     # .env의 MENU_{ID}_ENABLED로 메뉴 노출 제어 (기본값: true)
@@ -149,6 +158,7 @@ def create_app() -> Flask:
         settings_keys=SETTINGS_KEYS,
         slack_service=slack_svc,
         schedule_builder=_build_schedule_for_slack,
+        qa_gmg_report_service=qa_gmg_report_service,
     )
 
     return app
@@ -170,6 +180,34 @@ def _init_jira(config) -> JiraService | None:
         username=config.jira_username,
         password=config.jira_password,
         board_id=config.jira_board_id,
+    )
+
+
+def _init_qa_gmg_jira(config) -> JiraService | None:
+    """QA_GMG Jira 서비스를 초기화한다.
+
+    QA_GMG는 스프린트 보드 없이 JQL로 이슈를 조회하므로
+    board_id 없이 기존 Jira 서버 인증만 공유한다.
+    """
+    errors = config.validate_qa_gmg_jira()
+    if errors:
+        logger.warning("QA_GMG Jira 설정 누락: %s", ", ".join(errors))
+        return None
+    # 기존 Jira 서버 인증 정보 공유
+    jira_errors = []
+    if not config.jira_base_url:
+        jira_errors.append("JIRA_BASE_URL")
+    if not config.jira_username:
+        jira_errors.append("JIRA_USERNAME")
+    if not config.jira_password:
+        jira_errors.append("JIRA_PASSWORD")
+    if jira_errors:
+        logger.warning("Jira 공통 설정 누락: %s", ", ".join(jira_errors))
+        return None
+    return JiraService(
+        base_url=config.jira_base_url,
+        username=config.jira_username,
+        password=config.jira_password,
     )
 
 

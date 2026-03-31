@@ -36,6 +36,7 @@ def init_routes(
     settings_keys: list[str],
     slack_service=None,
     schedule_builder=None,
+    qa_gmg_report_service=None,
 ) -> None:
     """라우트를 Flask 앱에 등록한다."""
 
@@ -83,6 +84,15 @@ def init_routes(
             config=config,
         )
 
+    @pages.route("/qa-gmg")
+    def qa_gmg():
+        """QA_GMG 대시보드 페이지 (로딩 화면 먼저 표시)."""
+        return render_template(
+            "index.html",
+            active_partial="partials/qa_gmg_loading.html",
+            config=config,
+        )
+
     @pages.route("/settings")
     def settings_page():
         """설정 페이지."""
@@ -116,6 +126,7 @@ def init_routes(
         return render_template(
             "partials/dashboard.html",
             report=report,
+            jira_base_url=config.jira_base_url,
             config=config,
         )
 
@@ -144,6 +155,24 @@ def init_routes(
             schedule=sprint_schedule,
             burndown=burndown,
             updated_at=updated_at,
+            config=config,
+        )
+
+    @pages.route("/partials/qa-gmg")
+    def partials_qa_gmg():
+        """HTMX 파셜: QA_GMG 대시보드 (로딩 화면)."""
+        return render_template(
+            "partials/qa_gmg_loading.html", config=config
+        )
+
+    @pages.route("/partials/qa-gmg/data")
+    def partials_qa_gmg_data():
+        """HTMX 파셜: QA_GMG 대시보드 데이터 (비동기 로드)."""
+        report = _build_qa_gmg_report()
+        return render_template(
+            "partials/dashboard.html",
+            report=report,
+            jira_base_url=config.jira_base_url,
             config=config,
         )
 
@@ -439,6 +468,18 @@ def init_routes(
             return report_service.generate_sprint_report()
         except Exception:
             logger.exception("스프린트 리포트 생성 실패")
+            return None
+
+    def _build_qa_gmg_report():
+        """QA_GMG 대시보드용 프로젝트 리포트를 생성한다."""
+        if not qa_gmg_report_service:
+            return None
+        try:
+            return qa_gmg_report_service.generate_project_report(
+                config.qa_gmg_jira_project_key
+            )
+        except Exception:
+            logger.exception("QA_GMG 프로젝트 리포트 생성 실패")
             return None
 
     def _get_effective_settings() -> dict[str, str]:
