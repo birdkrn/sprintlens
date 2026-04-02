@@ -16,6 +16,7 @@ def format_slack_report(
     show_in_progress: int = 99,
     show_done: int = 5,
     show_waiting: int = 5,
+    show_added: int = 5,
 ) -> str:
     """SprintSchedule을 슬랙 mrkdwn 메시지로 포매팅한다."""
     lines: list[str] = []
@@ -69,7 +70,7 @@ def format_slack_report(
     added = _get_added_tasks(schedule)
     if added:
         lines.append(f":heavy_plus_sign: *추가된 일정 {len(added)}건*")
-        _append_task_lines(lines, added, show_in_progress)
+        _append_task_lines(lines, added, show_added)
         lines.append("")
 
     # 상세 보기 링크

@@ -78,6 +78,7 @@ class Config:
     slack_show_in_progress: int = 99
     slack_show_done: int = 5
     slack_show_waiting: int = 5
+    slack_show_added: int = 5
 
     def validate(self) -> list[str]:
         """전체 필수 설정값 검증. 누락된 항목 목록을 반환한다."""
@@ -198,6 +199,7 @@ def load_config() -> Config:
         slack_show_in_progress=int(os.getenv("SLACK_SHOW_IN_PROGRESS", "99")),
         slack_show_done=int(os.getenv("SLACK_SHOW_DONE", "5")),
         slack_show_waiting=int(os.getenv("SLACK_SHOW_WAITING", "5")),
+        slack_show_added=int(os.getenv("SLACK_SHOW_ADDED", "5")),
         program_team_members=tuple(
             name.strip()
             for name in os.getenv("PROGRAM_TEAM_MEMBERS", "").split(",")

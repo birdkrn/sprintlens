@@ -258,6 +258,7 @@ def _init_slack_scheduler(config, schedule_builder) -> None:
         show_in_progress=config.slack_show_in_progress,
         show_done=config.slack_show_done,
         show_waiting=config.slack_show_waiting,
+        show_added=config.slack_show_added,
     )
     scheduler.start()
 

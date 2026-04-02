@@ -229,6 +229,7 @@ def init_routes(
             show_in_progress=config.slack_show_in_progress,
             show_done=config.slack_show_done,
             show_waiting=config.slack_show_waiting,
+            show_added=config.slack_show_added,
         )
         success = slack_service.send_message(text)
         if success:
