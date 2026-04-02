@@ -144,14 +144,27 @@ class ReportService:
             for key, group in sorted(groups.items())
         ]
 
-    def generate_project_report(self, project_key: str) -> SprintReport | None:
-        """프로젝트 키 기반으로 전체 이슈 리포트를 생성한다.
+    def generate_project_report(
+        self,
+        project_key: str,
+        statuses: tuple[str, ...] = (),
+    ) -> SprintReport | None:
+        """프로젝트 키 기반으로 이슈 리포트를 생성한다.
 
         스프린트 보드가 없는 프로젝트(예: QA)용으로,
-        JQL로 프로젝트의 모든 미완료+최근완료 이슈를 조회한다.
+        JQL로 지정된 상태의 이슈를 조회한다.
+
+        Args:
+            project_key: Jira 프로젝트 키.
+            statuses: 필터링할 상태 목록. 비어있으면 전체 이슈 조회.
         """
+        status_clause = ""
+        if statuses:
+            quoted = ", ".join(f'"{s}"' for s in statuses)
+            status_clause = f"AND status IN ({quoted}) "
         jql = (
             f"project = {project_key} "
+            f"{status_clause}"
             "ORDER BY status ASC, updated DESC"
         )
         issues = self._jira.search_issues(jql)

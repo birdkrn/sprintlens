@@ -477,7 +477,8 @@ def init_routes(
             return None
         try:
             return qa_gmg_report_service.generate_project_report(
-                config.qa_gmg_jira_project_key
+                config.qa_gmg_jira_project_key,
+                statuses=config.qa_gmg_jql_statuses,
             )
         except Exception:
             logger.exception("QA_GMG 프로젝트 리포트 생성 실패")

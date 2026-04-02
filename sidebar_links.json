@@ -5,7 +5,7 @@
     "icon": "board"
   },
   {
-    "name": "Jira 프로그램팀 대시보드",
+    "name": "Jira - 프로그램팀 대시보드",
     "url": "https://jira.line.games/secure/Dashboard.jspa?selectPageId=14701",
     "icon": "board"
   },
@@ -13,6 +13,10 @@
     "name": "4월 1회차 일정 문서",
     "url": "https://wiki.line.games/pages/viewpage.action?pageId=180511653",
     "icon": "doc"
+  },
+  {
+    "name": "Jira - QA_GMG",
+    "url": "https://jira.line.games/projects/QAGMG/summary",
+    "icon": "board"
   }
-
 ]
