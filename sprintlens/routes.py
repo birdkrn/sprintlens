@@ -170,7 +170,7 @@ def init_routes(
         """HTMX 파셜: QA_GMG 대시보드 데이터 (비동기 로드)."""
         report = _build_qa_gmg_report()
         return render_template(
-            "partials/dashboard.html",
+            "partials/qa_gmg_dashboard.html",
             report=report,
             jira_base_url=config.jira_base_url,
             config=config,

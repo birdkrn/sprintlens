@@ -69,6 +69,12 @@ class SprintReport:
         return sum(1 for i in self.issues if i.status_category == "done")
 
     @property
+    def in_progress_count(self) -> int:
+        return sum(
+            1 for i in self.issues if i.status_category == "indeterminate"
+        )
+
+    @property
     def progress_percent(self) -> float:
         if self.total_issues == 0:
             return 0.0
