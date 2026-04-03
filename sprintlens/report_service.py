@@ -25,9 +25,7 @@ class AssigneeReport:
 
     @property
     def in_progress_count(self) -> int:
-        return sum(
-            1 for i in self.issues if i.status_category == "indeterminate"
-        )
+        return sum(1 for i in self.issues if i.status_category == "indeterminate")
 
     @property
     def todo_count(self) -> int:
@@ -59,6 +57,8 @@ class SprintReport:
     issues: list[IssueInfo]
     by_assignee: list[AssigneeReport] = field(default_factory=list)
     by_story: list[StoryReport] = field(default_factory=list)
+    by_dev_team: list[AssigneeReport] = field(default_factory=list)
+    by_line_team: list[AssigneeReport] = field(default_factory=list)
 
     @property
     def total_issues(self) -> int:
@@ -70,9 +70,7 @@ class SprintReport:
 
     @property
     def in_progress_count(self) -> int:
-        return sum(
-            1 for i in self.issues if i.status_category == "indeterminate"
-        )
+        return sum(1 for i in self.issues if i.status_category == "indeterminate")
 
     @property
     def progress_percent(self) -> float:
@@ -110,15 +108,30 @@ class ReportService:
         )
         return report
 
-    def _group_by_assignee(
-        self, issues: list[IssueInfo]
-    ) -> list[AssigneeReport]:
+    def _group_by_assignee(self, issues: list[IssueInfo]) -> list[AssigneeReport]:
         """이슈를 담당자별로 그룹핑한다."""
         groups: dict[str, list[IssueInfo]] = {}
         for issue in issues:
             name = issue.assignee or "미배정"
             groups.setdefault(name, []).append(issue)
 
+        return [
+            AssigneeReport(name=name, issues=group)
+            for name, group in sorted(groups.items())
+        ]
+
+    def _group_by_team(
+        self, issues: list[IssueInfo], members: tuple[str, ...]
+    ) -> list[AssigneeReport]:
+        """지정된 팀 멤버에 해당하는 이슈를 담당자별로 그룹핑한다."""
+        if not members:
+            return []
+        member_set = set(members)
+        groups: dict[str, list[IssueInfo]] = {}
+        for issue in issues:
+            name = issue.assignee or "미배정"
+            if name in member_set:
+                groups.setdefault(name, []).append(issue)
         return [
             AssigneeReport(name=name, issues=group)
             for name, group in sorted(groups.items())
@@ -144,28 +157,44 @@ class ReportService:
             for key, group in sorted(groups.items())
         ]
 
+    def _group_excluding_team(
+        self, issues: list[IssueInfo], exclude_members: tuple[str, ...]
+    ) -> list[AssigneeReport]:
+        """지정된 팀 멤버를 제외한 이슈를 담당자별로 그룹핑한다."""
+        exclude_set = set(exclude_members)
+        groups: dict[str, list[IssueInfo]] = {}
+        for issue in issues:
+            name = issue.assignee or "미배정"
+            if name not in exclude_set:
+                groups.setdefault(name, []).append(issue)
+        return [
+            AssigneeReport(name=name, issues=group)
+            for name, group in sorted(groups.items())
+        ]
+
     def generate_project_report(
         self,
         project_key: str,
         statuses: tuple[str, ...] = (),
+        dev_members: tuple[str, ...] = (),
     ) -> SprintReport | None:
         """프로젝트 키 기반으로 이슈 리포트를 생성한다.
 
         스프린트 보드가 없는 프로젝트(예: QA)용으로,
         JQL로 지정된 상태의 이슈를 조회한다.
+        개발팀 멤버가 아닌 담당자는 라인으로 분류한다.
 
         Args:
             project_key: Jira 프로젝트 키.
             statuses: 필터링할 상태 목록. 비어있으면 전체 이슈 조회.
+            dev_members: 개발팀 멤버 목록. 이 외 담당자는 라인으로 분류.
         """
         status_clause = ""
         if statuses:
             quoted = ", ".join(f'"{s}"' for s in statuses)
             status_clause = f"AND status IN ({quoted}) "
         jql = (
-            f"project = {project_key} "
-            f"{status_clause}"
-            "ORDER BY status ASC, updated DESC"
+            f"project = {project_key} {status_clause}ORDER BY status ASC, updated DESC"
         )
         issues = self._jira.search_issues(jql)
         if not issues:
@@ -177,6 +206,8 @@ class ReportService:
             state="active",
         )
         by_assignee = self._group_by_assignee(issues)
+        by_dev_team = self._group_by_team(issues, dev_members)
+        by_line_team = self._group_excluding_team(issues, dev_members)
         by_story = self._group_by_story(issues)
 
         report = SprintReport(
@@ -184,6 +215,8 @@ class ReportService:
             issues=issues,
             by_assignee=by_assignee,
             by_story=by_story,
+            by_dev_team=by_dev_team,
+            by_line_team=by_line_team,
         )
         logger.info(
             "프로젝트 리포트 생성 완료: %s (이슈 %d건)",

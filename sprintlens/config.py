@@ -59,6 +59,9 @@ class Config:
         "IN PROGRESS(HOLD)",
     )
 
+    # QA_GMG 팀 멤버
+    qa_gmg_dev_members: tuple[str, ...] = ()  # 개발팀 멤버 (이 외는 라인으로 분류)
+
     # Confluence
     confluence_base_url: str = ""
     confluence_username: str = ""
@@ -201,6 +204,11 @@ def load_config() -> Config:
                 "NEW ISSUE,ASSIGNED ISSUE,IN PROGRESS,IN PROGRESS(HOLD)",
             ).split(",")
             if s.strip()
+        ),
+        qa_gmg_dev_members=tuple(
+            name.strip()
+            for name in os.getenv("QA_GMG_DEV_MEMBERS", "").split(",")
+            if name.strip()
         ),
         confluence_base_url=os.getenv("CONFLUENCE_BASE_URL", ""),
         confluence_username=os.getenv("CONFLUENCE_USERNAME", ""),

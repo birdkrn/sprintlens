@@ -115,9 +115,7 @@ def init_routes(
     @pages.route("/partials/dashboard")
     def partials_dashboard():
         """HTMX 파셜: 대시보드 (로딩 화면)."""
-        return render_template(
-            "partials/dashboard_loading.html", config=config
-        )
+        return render_template("partials/dashboard_loading.html", config=config)
 
     @pages.route("/partials/dashboard/data")
     def partials_dashboard_data():
@@ -144,9 +142,7 @@ def init_routes(
     def partials_schedule_data():
         """HTMX 파셜: 프로그램팀 일정 데이터 (비동기 로드)."""
         refresh = request.args.get("refresh") == "1"
-        sprint_schedule, updated_at = _build_schedule_cached(
-            force_refresh=refresh
-        )
+        sprint_schedule, updated_at = _build_schedule_cached(force_refresh=refresh)
         burndown = None
         if sprint_schedule:
             burndown = calculate_burndown(sprint_schedule)
@@ -161,9 +157,7 @@ def init_routes(
     @pages.route("/partials/qa-gmg")
     def partials_qa_gmg():
         """HTMX 파셜: QA_GMG 대시보드 (로딩 화면)."""
-        return render_template(
-            "partials/qa_gmg_loading.html", config=config
-        )
+        return render_template("partials/qa_gmg_loading.html", config=config)
 
     @pages.route("/partials/qa-gmg/data")
     def partials_qa_gmg_data():
@@ -200,11 +194,7 @@ def init_routes(
         if password != config.settings_password:
             return jsonify({"error": "비밀번호가 일치하지 않습니다."}), 403
 
-        to_save = {
-            k: str(v).strip()
-            for k, v in data.items()
-            if k in settings_keys
-        }
+        to_save = {k: str(v).strip() for k, v in data.items() if k in settings_keys}
         if to_save:
             settings_store.set_many(to_save)
             cache_store.invalidate(_schedule_cache_key())
@@ -294,20 +284,24 @@ def init_routes(
                 for cat in section.categories:
                     for task in cat.tasks:
                         assignees = ", ".join(task.assignees) if task.assignees else ""
-                        tasks_list.append({
-                            "section": section.name,
-                            "category": cat.name,
-                            "task": task.title,
-                            "assignees": assignees,
-                        })
+                        tasks_list.append(
+                            {
+                                "section": section.name,
+                                "category": cat.name,
+                                "task": task.title,
+                                "assignees": assignees,
+                            }
+                        )
         # 추가된 일정: 프로그램팀 전체 멤버를 대상으로 표시
         for member in sorted(config.program_team_members):
             cat_name = f"{member}의 작업"
-            tasks_list.append({
-                "section": ADDED_SECTION_NAME,
-                "category": cat_name,
-                "task": cat_name,
-            })
+            tasks_list.append(
+                {
+                    "section": ADDED_SECTION_NAME,
+                    "category": cat_name,
+                    "task": cat_name,
+                }
+            )
 
         return jsonify({"tasks": tasks_list})
 
@@ -450,7 +444,11 @@ def init_routes(
         """Confluence 일정을 가져와 파싱하고, Jira 이슈를 AI로 매칭한다."""
         page_id = _get_setting("confluence_sprint_page_id")
         members = _get_setting("program_team_members")
-        team_members = tuple(m.strip() for m in members.split(",") if m.strip()) if members else config.program_team_members
+        team_members = (
+            tuple(m.strip() for m in members.split(",") if m.strip())
+            if members
+            else config.program_team_members
+        )
         return build_schedule(
             confluence_service=confluence_service,
             page_id=page_id,
@@ -476,9 +474,17 @@ def init_routes(
         if not qa_gmg_report_service:
             return None
         try:
+            # settings_store에서 먼저 조회, 없으면 config 폴백
+            dev_members_str = _get_setting("qa_gmg_dev_members")
+            dev_members = (
+                tuple(m.strip() for m in dev_members_str.split(",") if m.strip())
+                if dev_members_str
+                else config.qa_gmg_dev_members
+            )
             return qa_gmg_report_service.generate_project_report(
                 config.qa_gmg_jira_project_key,
                 statuses=config.qa_gmg_jql_statuses,
+                dev_members=dev_members,
             )
         except Exception:
             logger.exception("QA_GMG 프로젝트 리포트 생성 실패")

@@ -32,6 +32,24 @@
             </div>
         </div>
 
+        <!-- QA_GMG 설정 -->
+        <div class="mb-8">
+            <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wider mb-4">QA_GMG 설정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm font-medium block mb-1">개발팀 멤버</label>
+                    <input
+                        type="text"
+                        name="qa_gmg_dev_members"
+                        value="{{ settings.qa_gmg_dev_members }}"
+                        class="input input-bordered input-sm w-full max-w-md"
+                        placeholder="쉼표 구분 (예: 홍길동,김철수)"
+                    >
+                    <p class="text-xs text-base-content/40 mt-1">Jira displayName 기준, 쉼표로 구분. 개발팀이 아닌 담당자는 라인으로 자동 분류됩니다.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Jira 설정 -->
         <div class="mb-8">
             <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wider mb-4">Jira 설정</h3>

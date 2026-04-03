@@ -34,6 +34,7 @@ SETTINGS_KEYS = [
     "jira_project_key",
     "confluence_base_url",
     "confluence_space_key",
+    "qa_gmg_dev_members",
 ]
 
 

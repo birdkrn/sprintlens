@@ -21,38 +21,76 @@
     </div>
 </div>
 
-<!-- 담당자별 현황 -->
-<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
-    <h3 class="text-lg font-semibold mb-4">담당자별 현황</h3>
-    <div class="overflow-x-auto">
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>담당자</th>
-                    <th class="text-center">전체</th>
-                    <th class="text-center">완료</th>
-                    <th class="text-center">진행중</th>
-                    <th class="text-center">대기</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ar in report.by_assignee %}
-                <tr class="hover">
-                    <td class="font-medium">{{ ar.name }}</td>
-                    <td class="text-center">{{ ar.total }}</td>
-                    <td class="text-center">
-                        <span class="badge badge-success badge-sm">{{ ar.done_count }}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge badge-info badge-sm">{{ ar.in_progress_count }}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge badge-ghost badge-sm">{{ ar.todo_count }}</span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- 팀별 담당자 현황 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- 개발팀 현황 -->
+    <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5">
+        <h3 class="text-lg font-semibold mb-4">개발팀 현황</h3>
+        {% if report.by_dev_team %}
+        <div class="overflow-x-auto">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>담당자</th>
+                        <th class="text-center">전체</th>
+                        <th class="text-center">진행중</th>
+                        <th class="text-center">대기</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ar in report.by_dev_team %}
+                    <tr class="hover">
+                        <td class="font-medium">{{ ar.name }}</td>
+                        <td class="text-center">{{ ar.total }}</td>
+                        <td class="text-center">
+                            <span class="badge badge-info badge-sm">{{ ar.in_progress_count }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-ghost badge-sm">{{ ar.todo_count }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-sm text-base-content/50">멤버가 설정되지 않았습니다.</p>
+        {% endif %}
+    </div>
+
+    <!-- 라인 현황 -->
+    <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5">
+        <h3 class="text-lg font-semibold mb-4">라인 현황</h3>
+        {% if report.by_line_team %}
+        <div class="overflow-x-auto">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>담당자</th>
+                        <th class="text-center">전체</th>
+                        <th class="text-center">진행중</th>
+                        <th class="text-center">대기</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ar in report.by_line_team %}
+                    <tr class="hover">
+                        <td class="font-medium">{{ ar.name }}</td>
+                        <td class="text-center">{{ ar.total }}</td>
+                        <td class="text-center">
+                            <span class="badge badge-info badge-sm">{{ ar.in_progress_count }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-ghost badge-sm">{{ ar.todo_count }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-sm text-base-content/50">멤버가 설정되지 않았습니다.</p>
+        {% endif %}
     </div>
 </div>
 
