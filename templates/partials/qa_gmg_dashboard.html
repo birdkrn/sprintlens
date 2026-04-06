@@ -105,28 +105,28 @@
         <table class="table table-sm">
             <thead>
                 <tr>
-                    <th class="w-28">이슈 ID</th>
-                    <th class="w-8">유형</th>
-                    <th>우선순위</th>
+                    <th class="w-28 cursor-pointer select-none" data-sort-col="0">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="w-8 cursor-pointer select-none" data-sort-col="1">유형 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="2">우선순위 <span class="sort-arrow text-xs opacity-30">↕</span></th>
                     <th>제목</th>
-                    <th>레이블</th>
-                    <th>상태</th>
-                    <th>담당자</th>
-                    <th>생성일</th>
-                    <th>변경일</th>
+                    <th class="cursor-pointer select-none" data-sort-col="4">레이블 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="5">상태 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="6">담당자 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="7">생성일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="8">변경일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
                 </tr>
             </thead>
             <tbody>
                 {% for issue in report.dev_issues %}
                 <tr class="hover" data-updated="{{ issue.updated }}">
-                    <td>
+                    <td data-sort-value="{{ issue.key }}">
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
                             target="_blank"
                             class="link link-primary font-mono text-xs"
                         >{{ issue.key }}</a>
                     </td>
-                    <td>
+                    <td data-sort-value="{{ {'버그':0,'부작업':1,'문의':2,'건의':3}.get(issue.issue_type, 99) }}">
                         <span class="flex items-center gap-1">
                             {% if issue.icon_url %}
                             <img src="{{ issue.icon_url }}" alt="{{ issue.issue_type }}" class="w-4 h-4">
@@ -134,7 +134,7 @@
                             <span class="text-xs">{{ issue.issue_type }}</span>
                         </span>
                     </td>
-                    <td>
+                    <td data-sort-value="{{ {'Highest':0,'High':1,'Medium':2,'Low':3,'Lowest':4}.get(issue.priority, 99) }}">
                         {% if issue.priority_icon_url %}
                         <span class="flex items-center gap-1">
                             <img src="{{ issue.priority_icon_url }}" alt="{{ issue.priority }}" class="w-4 h-4">
@@ -145,8 +145,8 @@
                     <td class="max-w-md truncate" title="{{ issue.summary }}">
                         {{ issue.summary }}
                     </td>
-                    <td class="text-xs">{{ issue.labels | join(", ") }}</td>
-                    <td>
+                    <td class="text-xs label-sort" data-sort-value="" data-labels="{{ issue.labels | join(',') }}">{{ issue.labels | join(", ") }}</td>
+                    <td data-sort-value="{{ {'작업 중':0,'이슈 (할당됨)':1,'작업 중(홀드)':2}.get(issue.status, 99) }}">
                         {% if issue.status_category == 'done' %}
                         <span class="badge badge-success badge-sm gap-1">{{ issue.status }}</span>
                         {% elif issue.status_category == 'indeterminate' %}
@@ -155,9 +155,9 @@
                         <span class="badge badge-ghost badge-sm gap-1">{{ issue.status }}</span>
                         {% endif %}
                     </td>
-                    <td>{{ issue.assignee or '미배정' }}</td>
-                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.created }}"></td>
-                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.updated }}"></td>
+                    <td data-sort-value="{{ issue.assignee or '미배정' }}">{{ issue.assignee or '미배정' }}</td>
+                    <td class="text-xs text-base-content/70 relative-time" data-sort-value="{{ issue.created }}" data-datetime="{{ issue.created }}"></td>
+                    <td class="text-xs text-base-content/70 relative-time" data-sort-value="{{ issue.updated }}" data-datetime="{{ issue.updated }}"></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -179,28 +179,28 @@
         <table class="table table-sm">
             <thead>
                 <tr>
-                    <th class="w-28">이슈 ID</th>
-                    <th class="w-8">유형</th>
-                    <th>우선순위</th>
+                    <th class="w-28 cursor-pointer select-none" data-sort-col="0">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="w-8 cursor-pointer select-none" data-sort-col="1">유형 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="2">우선순위 <span class="sort-arrow text-xs opacity-30">↕</span></th>
                     <th>제목</th>
-                    <th>레이블</th>
-                    <th>상태</th>
-                    <th>담당자</th>
-                    <th>생성일</th>
-                    <th>변경일</th>
+                    <th class="cursor-pointer select-none" data-sort-col="4">레이블 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="5">상태 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="6">담당자 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="7">생성일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="8">변경일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
                 </tr>
             </thead>
             <tbody>
                 {% for issue in report.line_issues %}
                 <tr class="hover" data-updated="{{ issue.updated }}">
-                    <td>
+                    <td data-sort-value="{{ issue.key }}">
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
                             target="_blank"
                             class="link link-primary font-mono text-xs"
                         >{{ issue.key }}</a>
                     </td>
-                    <td>
+                    <td data-sort-value="{{ {'버그':0,'부작업':1,'문의':2,'건의':3}.get(issue.issue_type, 99) }}">
                         <span class="flex items-center gap-1">
                             {% if issue.icon_url %}
                             <img src="{{ issue.icon_url }}" alt="{{ issue.issue_type }}" class="w-4 h-4">
@@ -208,7 +208,7 @@
                             <span class="text-xs">{{ issue.issue_type }}</span>
                         </span>
                     </td>
-                    <td>
+                    <td data-sort-value="{{ {'Highest':0,'High':1,'Medium':2,'Low':3,'Lowest':4}.get(issue.priority, 99) }}">
                         {% if issue.priority_icon_url %}
                         <span class="flex items-center gap-1">
                             <img src="{{ issue.priority_icon_url }}" alt="{{ issue.priority }}" class="w-4 h-4">
@@ -219,8 +219,8 @@
                     <td class="max-w-md truncate" title="{{ issue.summary }}">
                         {{ issue.summary }}
                     </td>
-                    <td class="text-xs">{{ issue.labels | join(", ") }}</td>
-                    <td>
+                    <td class="text-xs label-sort" data-sort-value="" data-labels="{{ issue.labels | join(',') }}">{{ issue.labels | join(", ") }}</td>
+                    <td data-sort-value="{{ {'작업 중':0,'이슈 (할당됨)':1,'작업 중(홀드)':2}.get(issue.status, 99) }}">
                         {% if issue.status_category == 'done' %}
                         <span class="badge badge-success badge-sm gap-1">{{ issue.status }}</span>
                         {% elif issue.status_category == 'indeterminate' %}
@@ -229,9 +229,9 @@
                         <span class="badge badge-ghost badge-sm gap-1">{{ issue.status }}</span>
                         {% endif %}
                     </td>
-                    <td>{{ issue.assignee or '미배정' }}</td>
-                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.created }}"></td>
-                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.updated }}"></td>
+                    <td data-sort-value="{{ issue.assignee or '미배정' }}">{{ issue.assignee or '미배정' }}</td>
+                    <td class="text-xs text-base-content/70 relative-time" data-sort-value="{{ issue.created }}" data-datetime="{{ issue.created }}"></td>
+                    <td class="text-xs text-base-content/70 relative-time" data-sort-value="{{ issue.updated }}" data-datetime="{{ issue.updated }}"></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -250,6 +250,7 @@
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
+    /* ── 상대 시간 표시 ── */
     function formatRelativeTime(isoStr) {
         if (!isoStr) return "";
         const date = new Date(isoStr);
@@ -257,7 +258,6 @@
         const diffMin = Math.floor(diffMs / 60000);
         const diffHour = Math.floor(diffMs / 3600000);
         const diffDay = Math.floor(diffMs / 86400000);
-
         if (diffMin < 1) return "방금 전";
         if (diffMin < 60) return diffMin + "분 전";
         if (diffHour < 24) return diffHour + "시간 전";
@@ -270,12 +270,109 @@
         td.title = td.dataset.datetime;
     });
 
+    /* ── 최근 변경 하이라이트 ── */
     document.querySelectorAll('tr[data-updated]').forEach(tr => {
         const updated = (tr.dataset.updated || "").slice(0, 10);
         if (updated === todayStr) {
             tr.classList.add('bg-warning/10');
         } else if (updated === yesterdayStr) {
             tr.classList.add('bg-info/5');
+        }
+    });
+
+    /* ── 레이블 정렬값 계산 ── */
+    function labelSortKey(labelsStr) {
+        if (!labelsStr) return 999999;
+        const labels = labelsStr.split(',').map(s => s.trim()).filter(Boolean);
+        let best = 999999;
+        for (const label of labels) {
+            const m = label.match(/^GMG_(\d+)\.(\d+)(?:R(\d+))?$/);
+            if (m) {
+                const val = parseInt(m[1]) * 10000 + parseInt(m[2]) * 100 + (m[3] ? parseInt(m[3]) : 0);
+                if (val < best) best = val;
+            }
+        }
+        return best;
+    }
+
+    document.querySelectorAll('.label-sort').forEach(td => {
+        td.dataset.sortValue = String(labelSortKey(td.dataset.labels));
+    });
+
+    /* ── 소팅 엔진 ── */
+    function compareValues(a, b, colIdx) {
+        const aVal = a.cells[colIdx].dataset.sortValue || "";
+        const bVal = b.cells[colIdx].dataset.sortValue || "";
+        /* 값 전체가 숫자인 경우만 숫자 비교 (ISO 날짜 등 오판 방지) */
+        if (/^-?\d+(\.\d+)?$/.test(aVal) && /^-?\d+(\.\d+)?$/.test(bVal)) {
+            return parseFloat(aVal) - parseFloat(bVal);
+        }
+        return aVal.localeCompare(bVal, 'ko');
+    }
+
+    function sortTable(table, colIdx, ascending) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+            const cmp = compareValues(a, b, colIdx);
+            return ascending ? cmp : -cmp;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    /* 기본 다중 키 정렬: 레이블(4) > 우선순위(2) > 유형(1) > 변경일(8) > 생성일(7) */
+    function applyDefaultSort(table) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const keys = [4, 2, 1, 8, 7];
+        /* 날짜 컬럼(7,8)은 내림차순(최근순), 나머지는 오름차순 */
+        const descCols = new Set([7, 8]);
+        rows.sort((a, b) => {
+            for (const col of keys) {
+                let cmp = compareValues(a, b, col);
+                if (descCols.has(col)) cmp = -cmp;
+                if (cmp !== 0) return cmp;
+            }
+            return 0;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    /* ── 클릭 이벤트 ── */
+    document.querySelectorAll('th[data-sort-col]').forEach(th => {
+        th.addEventListener('click', function() {
+            const table = this.closest('table');
+            const colIdx = parseInt(this.dataset.sortCol);
+            const arrow = this.querySelector('.sort-arrow');
+            const prevText = arrow.textContent;
+
+            /* 같은 테이블의 모든 화살표를 기본 상태로 리셋 */
+            table.querySelectorAll('.sort-arrow').forEach(s => {
+                s.textContent = '↕';
+                s.classList.add('opacity-30');
+            });
+
+            /* 날짜 컬럼은 기본 내림차순, 나머지는 기본 오름차순 */
+            const isDateCol = colIdx === 7 || colIdx === 8;
+            let ascending;
+            if (prevText === '↕') {
+                ascending = isDateCol ? false : true;
+            } else {
+                ascending = prevText !== '▲';
+            }
+
+            arrow.textContent = ascending ? '▲' : '▼';
+            arrow.classList.remove('opacity-30');
+            sortTable(table, colIdx, ascending);
+        });
+    });
+
+    /* 페이지 로드 시 기본 정렬 적용 */
+    document.querySelectorAll('table.table').forEach(table => {
+        if (table.querySelector('th[data-sort-col]')) {
+            applyDefaultSort(table);
         }
     });
 })();
