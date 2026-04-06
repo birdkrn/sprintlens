@@ -37,6 +37,9 @@ class IssueInfo:
     parent_key: str = ""
     parent_summary: str = ""
     resolved_date: str | None = None  # "YYYY-MM-DD" (done 상태 전환 날짜)
+    priority: str = ""           # 우선순위 이름 (예: "High")
+    priority_icon_url: str = ""  # 우선순위 아이콘 URL
+    labels: tuple[str, ...] = () # 레이블 목록
 
 
 @dataclass
@@ -225,6 +228,7 @@ class JiraService:
 
             status = fields.get("status") or {}
             issuetype = fields.get("issuetype") or {}
+            priority = fields.get("priority") or {}
             assignee = fields.get("assignee")
             parent = fields.get("parent")
             status_category = (
@@ -250,6 +254,9 @@ class JiraService:
                     parent["fields"]["summary"] if parent else ""
                 ),
                 resolved_date=resolved_date,
+                priority=priority.get("name", ""),
+                priority_icon_url=priority.get("iconUrl", ""),
+                labels=tuple(fields.get("labels") or []),
             )
         except (KeyError, TypeError) as e:
             logger.warning("이슈 파싱 실패 %s: %s", issue.get("key"), e)

@@ -78,6 +78,16 @@ class SprintReport:
             return 0.0
         return (self.done_count / self.total_issues) * 100
 
+    @property
+    def dev_issues(self) -> list[IssueInfo]:
+        """개발팀 이슈 flat 리스트."""
+        return [i for ar in self.by_dev_team for i in ar.issues]
+
+    @property
+    def line_issues(self) -> list[IssueInfo]:
+        """라인 이슈 flat 리스트."""
+        return [i for ar in self.by_line_team for i in ar.issues]
+
 
 class ReportService:
     """스프린트 리포트를 생성하는 서비스."""

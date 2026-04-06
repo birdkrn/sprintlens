@@ -94,25 +94,28 @@
     </div>
 </div>
 
-<!-- 이슈 리스트 -->
+<!-- 개발팀 이슈 리스트 -->
 <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold">이슈 리스트</h3>
-        <span class="badge badge-outline badge-sm">{{ report.total_issues }}건</span>
+        <h3 class="text-lg font-semibold">개발팀 이슈 리스트</h3>
+        <span class="badge badge-outline badge-sm">{{ report.dev_issues|length }}건</span>
     </div>
+    {% if report.dev_issues %}
     <div class="overflow-x-auto">
         <table class="table table-sm">
             <thead>
                 <tr>
                     <th class="w-28">이슈 ID</th>
-                    <th>유형</th>
+                    <th class="w-8">유형</th>
+                    <th>우선순위</th>
                     <th>제목</th>
+                    <th>레이블</th>
                     <th>상태</th>
                     <th>담당자</th>
                 </tr>
             </thead>
             <tbody>
-                {% for issue in report.issues %}
+                {% for issue in report.dev_issues %}
                 <tr class="hover">
                     <td>
                         <a
@@ -122,11 +125,25 @@
                         >{{ issue.key }}</a>
                     </td>
                     <td>
-                        <span class="badge badge-ghost badge-xs">{{ issue.issue_type }}</span>
+                        <span class="flex items-center gap-1">
+                            {% if issue.icon_url %}
+                            <img src="{{ issue.icon_url }}" alt="{{ issue.issue_type }}" class="w-4 h-4">
+                            {% endif %}
+                            <span class="text-xs">{{ issue.issue_type }}</span>
+                        </span>
+                    </td>
+                    <td>
+                        {% if issue.priority_icon_url %}
+                        <span class="flex items-center gap-1">
+                            <img src="{{ issue.priority_icon_url }}" alt="{{ issue.priority }}" class="w-4 h-4">
+                            <span class="text-xs">{{ issue.priority }}</span>
+                        </span>
+                        {% endif %}
                     </td>
                     <td class="max-w-md truncate" title="{{ issue.summary }}">
                         {{ issue.summary }}
                     </td>
+                    <td class="text-xs">{{ issue.labels | join(", ") }}</td>
                     <td>
                         {% if issue.status_category == 'done' %}
                         <span class="badge badge-success badge-sm gap-1">{{ issue.status }}</span>
@@ -142,6 +159,79 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+    <p class="text-sm text-base-content/50">개발팀 이슈가 없습니다.</p>
+    {% endif %}
+</div>
+
+<!-- 라인 이슈 리스트 -->
+<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">라인 이슈 리스트</h3>
+        <span class="badge badge-outline badge-sm">{{ report.line_issues|length }}건</span>
+    </div>
+    {% if report.line_issues %}
+    <div class="overflow-x-auto">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th class="w-28">이슈 ID</th>
+                    <th class="w-8">유형</th>
+                    <th>우선순위</th>
+                    <th>제목</th>
+                    <th>레이블</th>
+                    <th>상태</th>
+                    <th>담당자</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in report.line_issues %}
+                <tr class="hover">
+                    <td>
+                        <a
+                            href="{{ jira_base_url }}/browse/{{ issue.key }}"
+                            target="_blank"
+                            class="link link-primary font-mono text-xs"
+                        >{{ issue.key }}</a>
+                    </td>
+                    <td>
+                        <span class="flex items-center gap-1">
+                            {% if issue.icon_url %}
+                            <img src="{{ issue.icon_url }}" alt="{{ issue.issue_type }}" class="w-4 h-4">
+                            {% endif %}
+                            <span class="text-xs">{{ issue.issue_type }}</span>
+                        </span>
+                    </td>
+                    <td>
+                        {% if issue.priority_icon_url %}
+                        <span class="flex items-center gap-1">
+                            <img src="{{ issue.priority_icon_url }}" alt="{{ issue.priority }}" class="w-4 h-4">
+                            <span class="text-xs">{{ issue.priority }}</span>
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="max-w-md truncate" title="{{ issue.summary }}">
+                        {{ issue.summary }}
+                    </td>
+                    <td class="text-xs">{{ issue.labels | join(", ") }}</td>
+                    <td>
+                        {% if issue.status_category == 'done' %}
+                        <span class="badge badge-success badge-sm gap-1">{{ issue.status }}</span>
+                        {% elif issue.status_category == 'indeterminate' %}
+                        <span class="badge badge-info badge-sm gap-1">{{ issue.status }}</span>
+                        {% else %}
+                        <span class="badge badge-ghost badge-sm gap-1">{{ issue.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ issue.assignee or '미배정' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-base-content/50">라인 이슈가 없습니다.</p>
+    {% endif %}
 </div>
 
 {% else %}
