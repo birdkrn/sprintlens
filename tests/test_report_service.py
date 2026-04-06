@@ -56,19 +56,3 @@ class TestReportService:
         service = ReportService(jira_service=mock_jira)
         assert service.generate_sprint_report() is None
 
-    def test_format_slack_report(self):
-        """슬랙 리포트 텍스트가 올바르게 생성된다."""
-        mock_jira = MagicMock()
-        service = ReportService(jira_service=mock_jira)
-
-        report = SprintReport(
-            sprint=SprintInfo(id=1, name="Sprint 1", state="active"),
-            issues=self._make_issues(),
-            by_assignee=service._group_by_assignee(self._make_issues()),
-            by_story=service._group_by_story(self._make_issues()),
-        )
-        text = service.format_slack_report(report)
-
-        assert "Sprint 1" in text
-        assert "김철수" in text
-        assert "이영희" in text

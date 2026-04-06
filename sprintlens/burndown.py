@@ -150,11 +150,13 @@ def calculate_burndown(schedule: SprintSchedule) -> BurndownData | None:
     today = date.today()
     today_index: int | None = None
 
+    processed_dates: set[date] = set()
     for i, workday in enumerate(workdays):
         # 이 작업일까지의 완료 포인트를 누적
         for d in sorted(daily_done):
-            if d <= workday:
-                cumulative_done += daily_done.pop(d)
+            if d <= workday and d not in processed_dates:
+                cumulative_done += daily_done[d]
+                processed_dates.add(d)
         actual.append(round(total_points - cumulative_done, 1))
 
         if workday == today:

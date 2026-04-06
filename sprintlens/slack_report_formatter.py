@@ -142,6 +142,18 @@ def _calc_progress(schedule: SprintSchedule) -> dict:
     }
 
 
+def _latest_resolved_date(task) -> str:
+    """task의 매칭된 이슈들 중 가장 최근 resolved_date를 반환한다."""
+    if not task.matched_issues:
+        return ""
+    dates = [
+        mi.resolved_date
+        for mi in task.matched_issues
+        if mi.resolved_date
+    ]
+    return max(dates) if dates else ""
+
+
 def _get_tasks_by_status(
     schedule: SprintSchedule, status: str
 ) -> list[tuple[str, list[str], bool, str]]:
@@ -161,25 +173,14 @@ def _get_tasks_by_status(
                 task_status = _classify_task(task)
                 if task_status == status:
                     is_no_jira = task_status == "no_jira"
-                    # 가장 최근 resolved_date 추출
-                    resolved = ""
-                    if task.matched_issues:
-                        dates = [
-                            mi.resolved_date
-                            for mi in task.matched_issues
-                            if mi.resolved_date
-                        ]
-                        if dates:
-                            resolved = max(dates)
                     result.append(
-                        (task.title, task.assignees, is_no_jira, resolved)
+                        (task.title, task.assignees, is_no_jira, _latest_resolved_date(task))
                     )
 
-    # done 상태는 최근 완료순 (내림차순)
     if status == "done":
         result.sort(key=lambda x: x[3], reverse=True)
 
-    return [(t, a, n, r) for t, a, n, r in result]
+    return result
 
 
 def _get_added_tasks(
@@ -192,17 +193,8 @@ def _get_added_tasks(
             continue
         for cat in sec.categories:
             for task in cat.tasks:
-                resolved = ""
-                if task.matched_issues:
-                    dates = [
-                        mi.resolved_date
-                        for mi in task.matched_issues
-                        if mi.resolved_date
-                    ]
-                    if dates:
-                        resolved = max(dates)
                 result.append(
-                    (task.title, task.assignees, False, resolved)
+                    (task.title, task.assignees, False, _latest_resolved_date(task))
                 )
     return result
 

@@ -132,18 +132,29 @@ class ReportService:
             for name, group in sorted(groups.items())
         ]
 
-    def _group_by_team(
-        self, issues: list[IssueInfo], members: tuple[str, ...]
+    def _group_by_members(
+        self,
+        issues: list[IssueInfo],
+        *,
+        include: tuple[str, ...] = (),
+        exclude: tuple[str, ...] = (),
     ) -> list[AssigneeReport]:
-        """지정된 팀 멤버에 해당하는 이슈를 담당자별로 그룹핑한다."""
-        if not members:
-            return []
-        member_set = set(members)
+        """멤버 필터 기반으로 이슈를 담당자별 그룹핑한다.
+
+        Args:
+            include: 포함할 멤버. 비어있으면 전체 포함.
+            exclude: 제외할 멤버.
+        """
+        include_set = set(include) if include else None
+        exclude_set = set(exclude) if exclude else set()
         groups: dict[str, list[IssueInfo]] = {}
         for issue in issues:
             name = issue.assignee or "미배정"
-            if name in member_set:
-                groups.setdefault(name, []).append(issue)
+            if include_set is not None and name not in include_set:
+                continue
+            if name in exclude_set:
+                continue
+            groups.setdefault(name, []).append(issue)
         return [
             AssigneeReport(name=name, issues=group)
             for name, group in sorted(groups.items())
@@ -167,21 +178,6 @@ class ReportService:
                 issues=group,
             )
             for key, group in sorted(groups.items())
-        ]
-
-    def _group_excluding_team(
-        self, issues: list[IssueInfo], exclude_members: tuple[str, ...]
-    ) -> list[AssigneeReport]:
-        """지정된 팀 멤버를 제외한 이슈를 담당자별로 그룹핑한다."""
-        exclude_set = set(exclude_members)
-        groups: dict[str, list[IssueInfo]] = {}
-        for issue in issues:
-            name = issue.assignee or "미배정"
-            if name not in exclude_set:
-                groups.setdefault(name, []).append(issue)
-        return [
-            AssigneeReport(name=name, issues=group)
-            for name, group in sorted(groups.items())
         ]
 
     def generate_project_report(
@@ -218,8 +214,8 @@ class ReportService:
             state="active",
         )
         by_assignee = self._group_by_assignee(issues)
-        by_dev_team = self._group_by_team(issues, dev_members)
-        by_line_team = self._group_excluding_team(issues, dev_members)
+        by_dev_team = self._group_by_members(issues, include=dev_members)
+        by_line_team = self._group_by_members(issues, exclude=dev_members)
         by_story = self._group_by_story(issues)
 
         report = SprintReport(
@@ -237,21 +233,3 @@ class ReportService:
         )
         return report
 
-    def format_slack_report(self, report: SprintReport) -> str:
-        """슬랙 발송용 텍스트 리포트를 생성한다."""
-        lines: list[str] = []
-        lines.append(f"*{report.sprint.name}* 스프린트 현황")
-        lines.append(
-            f"진행률: {report.done_count}/{report.total_issues}"
-            f" ({report.progress_percent:.0f}%)"
-        )
-        lines.append("")
-
-        lines.append("*담당자별 현황:*")
-        for ar in report.by_assignee:
-            lines.append(
-                f"  • {ar.name}: 완료 {ar.done_count} / 진행중"
-                f" {ar.in_progress_count} / 대기 {ar.todo_count}"
-            )
-
-        return "\n".join(lines)
