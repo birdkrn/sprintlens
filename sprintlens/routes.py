@@ -37,6 +37,7 @@ def init_routes(
     slack_service=None,
     schedule_builder=None,
     qa_gmg_report_service=None,
+    starred_store=None,
 ) -> None:
     """라우트를 Flask 앱에 등록한다."""
 
@@ -163,10 +164,12 @@ def init_routes(
     def partials_qa_gmg_data():
         """HTMX 파셜: QA_GMG 대시보드 데이터 (비동기 로드)."""
         report = _build_qa_gmg_report()
+        starred_keys = starred_store.get_all() if starred_store else set()
         return render_template(
             "partials/qa_gmg_dashboard.html",
             report=report,
             jira_base_url=config.jira_base_url,
+            starred_keys=starred_keys,
             config=config,
         )
 
@@ -225,6 +228,17 @@ def init_routes(
         if success:
             return jsonify({"ok": True, "message": "슬랙 발송 완료"})
         return jsonify({"error": "슬랙 발송 실패"}), 500
+
+    @api.route("/qa-gmg/star", methods=["POST"])
+    def api_toggle_star():
+        """QA_GMG 이슈 별표를 토글한다."""
+        if not starred_store:
+            return jsonify({"error": "별표 저장소가 초기화되지 않았습니다."}), 503
+        data = request.get_json()
+        if not data or not data.get("issue_key"):
+            return jsonify({"error": "issue_key가 필요합니다."}), 400
+        starred = starred_store.toggle(data["issue_key"])
+        return jsonify({"ok": True, "starred": starred})
 
     @api.route("/report")
     def api_report():

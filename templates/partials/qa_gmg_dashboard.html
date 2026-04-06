@@ -94,31 +94,67 @@
     </div>
 </div>
 
+<!-- 별표 이슈 리스트 -->
+<div id="starred-section" class="bg-base-100 rounded-2xl shadow-sm border border-warning/30 p-5 mb-6" {% if not report.dev_issues %}style="display:none"{% endif %}>
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span class="text-warning">★</span> 별표 이슈 리스트
+        </h3>
+        <span id="starred-count" class="badge badge-warning badge-sm">0건</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table id="starred-table" class="table table-sm" data-has-star="true">
+            <thead>
+                <tr>
+                    <th class="w-8"></th>
+                    <th class="w-28 cursor-pointer select-none" data-sort-col="1">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="w-8 cursor-pointer select-none" data-sort-col="2">유형 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="3">우선순위 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th>제목</th>
+                    <th class="cursor-pointer select-none" data-sort-col="5">레이블 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="6">상태 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="7">담당자 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="8">생성일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="9">변경일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                </tr>
+            </thead>
+            <tbody id="starred-tbody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- 개발팀 이슈 리스트 -->
 <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold">개발팀 이슈 리스트</h3>
-        <span class="badge badge-outline badge-sm">{{ report.dev_issues|length }}건</span>
+        <span id="dev-count" class="badge badge-outline badge-sm">{{ report.dev_issues|length }}건</span>
     </div>
     {% if report.dev_issues %}
     <div class="overflow-x-auto">
-        <table class="table table-sm">
+        <table class="table table-sm" data-has-star="true">
             <thead>
                 <tr>
-                    <th class="w-28 cursor-pointer select-none" data-sort-col="0">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
-                    <th class="w-8 cursor-pointer select-none" data-sort-col="1">유형 <span class="sort-arrow text-xs opacity-30">↕</span></th>
-                    <th class="cursor-pointer select-none" data-sort-col="2">우선순위 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="w-8"></th>
+                    <th class="w-28 cursor-pointer select-none" data-sort-col="1">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="w-8 cursor-pointer select-none" data-sort-col="2">유형 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="3">우선순위 <span class="sort-arrow text-xs opacity-30">↕</span></th>
                     <th>제목</th>
-                    <th class="cursor-pointer select-none" data-sort-col="4">레이블 <span class="sort-arrow text-xs opacity-30">↕</span></th>
-                    <th class="cursor-pointer select-none" data-sort-col="5">상태 <span class="sort-arrow text-xs opacity-30">↕</span></th>
-                    <th class="cursor-pointer select-none" data-sort-col="6">담당자 <span class="sort-arrow text-xs opacity-30">↕</span></th>
-                    <th class="cursor-pointer select-none" data-sort-col="7">생성일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
-                    <th class="cursor-pointer select-none" data-sort-col="8">변경일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="5">레이블 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="6">상태 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="7">담당자 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="8">생성일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="9">변경일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="dev-tbody">
                 {% for issue in report.dev_issues %}
-                <tr class="hover" data-updated="{{ issue.updated }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-issue-key="{{ issue.key }}">
+                    <td>
+                        <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
+                            {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
+                        </span>
+                    </td>
                     <td data-sort-value="{{ issue.key }}">
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
@@ -176,7 +212,7 @@
     </div>
     {% if report.line_issues %}
     <div class="overflow-x-auto">
-        <table class="table table-sm">
+        <table class="table table-sm" data-has-star="false">
             <thead>
                 <tr>
                     <th class="w-28 cursor-pointer select-none" data-sort-col="0">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
@@ -321,14 +357,20 @@
         rows.forEach(r => tbody.appendChild(r));
     }
 
-    /* 기본 다중 키 정렬: 레이블(4) > 우선순위(2) > 유형(1) > 변경일(8) > 생성일(7) */
+    /* 테이블별 기본 정렬 키 반환 */
+    function getDefaultKeys(table) {
+        if (table.dataset.hasStar === 'true') {
+            return { keys: [5, 3, 2, 9, 8], descCols: new Set([8, 9]) };
+        }
+        return { keys: [4, 2, 1, 8, 7], descCols: new Set([7, 8]) };
+    }
+
+    /* 기본 다중 키 정렬 */
     function applyDefaultSort(table) {
         const tbody = table.querySelector('tbody');
         if (!tbody) return;
         const rows = Array.from(tbody.querySelectorAll('tr'));
-        const keys = [4, 2, 1, 8, 7];
-        /* 날짜 컬럼(7,8)은 내림차순(최근순), 나머지는 오름차순 */
-        const descCols = new Set([7, 8]);
+        const { keys, descCols } = getDefaultKeys(table);
         rows.sort((a, b) => {
             for (const col of keys) {
                 let cmp = compareValues(a, b, col);
@@ -355,7 +397,8 @@
             });
 
             /* 날짜 컬럼은 기본 내림차순, 나머지는 기본 오름차순 */
-            const isDateCol = colIdx === 7 || colIdx === 8;
+            const hasStar = table.dataset.hasStar === 'true';
+            const isDateCol = hasStar ? (colIdx === 8 || colIdx === 9) : (colIdx === 7 || colIdx === 8);
             let ascending;
             if (prevText === '↕') {
                 ascending = isDateCol ? false : true;
@@ -375,6 +418,69 @@
             applyDefaultSort(table);
         }
     });
+
+    /* ── 별표 토글 ── */
+    function toggleStar(el) {
+        const key = el.dataset.key;
+        fetch('/api/qa-gmg/star', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({issue_key: key})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) return;
+            const tr = el.closest('tr');
+            const starredTbody = document.getElementById('starred-tbody');
+            const devTbody = document.getElementById('dev-tbody');
+
+            if (data.starred) {
+                el.textContent = '★';
+                el.classList.remove('text-base-content/20');
+                el.classList.add('text-warning');
+                starredTbody.appendChild(tr);
+            } else {
+                el.textContent = '☆';
+                el.classList.remove('text-warning');
+                el.classList.add('text-base-content/20');
+                devTbody.appendChild(tr);
+            }
+            updateStarredSection();
+        });
+    }
+
+    function updateStarredSection() {
+        const section = document.getElementById('starred-section');
+        const tbody = document.getElementById('starred-tbody');
+        const count = tbody.querySelectorAll('tr').length;
+        document.getElementById('starred-count').textContent = count + '건';
+        section.style.display = count > 0 ? '' : 'none';
+
+        /* 개발팀 카운트도 업데이트 */
+        const devCount = document.getElementById('dev-tbody').querySelectorAll('tr').length;
+        const devCountEl = document.getElementById('dev-count');
+        if (devCountEl) devCountEl.textContent = devCount + '건';
+    }
+
+    document.addEventListener('click', function(e) {
+        const star = e.target.closest('.star-toggle');
+        if (star) toggleStar(star);
+    });
+
+    /* 초기 별표 이슈 이동 */
+    (function initStarred() {
+        const starredTbody = document.getElementById('starred-tbody');
+        const devTbody = document.getElementById('dev-tbody');
+        if (!starredTbody || !devTbody) return;
+
+        devTbody.querySelectorAll('tr').forEach(tr => {
+            const star = tr.querySelector('.star-toggle');
+            if (star && star.textContent.trim() === '★') {
+                starredTbody.appendChild(tr);
+            }
+        });
+        updateStarredSection();
+    })();
 })();
 </script>
 

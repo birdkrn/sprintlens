@@ -22,6 +22,7 @@ from sprintlens.schedule_matcher import ScheduleMatcher
 from sprintlens.scheduler import ReportScheduler
 from sprintlens.settings_store import SettingsStore
 from sprintlens.slack_service import SlackService
+from sprintlens.starred_store import StarredIssueStore
 
 logger = get_logger(__name__)
 
@@ -68,6 +69,7 @@ def create_app() -> Flask:
     manual_match_store = ManualMatchStore(
         db_path=data_dir / "manual_matches.db"
     )
+    starred_store = StarredIssueStore(db_path=data_dir / "starred.db")
 
     # 슬랙 스케줄러용 일정 빌더
     def _build_schedule_for_slack():
@@ -160,6 +162,7 @@ def create_app() -> Flask:
         slack_service=slack_svc,
         schedule_builder=_build_schedule_for_slack,
         qa_gmg_report_service=qa_gmg_report_service,
+        starred_store=starred_store,
     )
 
     return app
