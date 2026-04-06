@@ -112,11 +112,13 @@
                     <th>레이블</th>
                     <th>상태</th>
                     <th>담당자</th>
+                    <th>생성일</th>
+                    <th>변경일</th>
                 </tr>
             </thead>
             <tbody>
                 {% for issue in report.dev_issues %}
-                <tr class="hover">
+                <tr class="hover" data-updated="{{ issue.updated }}">
                     <td>
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
@@ -154,6 +156,8 @@
                         {% endif %}
                     </td>
                     <td>{{ issue.assignee or '미배정' }}</td>
+                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.created }}"></td>
+                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.updated }}"></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -182,11 +186,13 @@
                     <th>레이블</th>
                     <th>상태</th>
                     <th>담당자</th>
+                    <th>생성일</th>
+                    <th>변경일</th>
                 </tr>
             </thead>
             <tbody>
                 {% for issue in report.line_issues %}
-                <tr class="hover">
+                <tr class="hover" data-updated="{{ issue.updated }}">
                     <td>
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
@@ -224,6 +230,8 @@
                         {% endif %}
                     </td>
                     <td>{{ issue.assignee or '미배정' }}</td>
+                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.created }}"></td>
+                    <td class="text-xs text-base-content/70 relative-time" data-datetime="{{ issue.updated }}"></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -233,6 +241,45 @@
     <p class="text-sm text-base-content/50">라인 이슈가 없습니다.</p>
     {% endif %}
 </div>
+
+<script>
+(function() {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    function formatRelativeTime(isoStr) {
+        if (!isoStr) return "";
+        const date = new Date(isoStr);
+        const diffMs = now - date;
+        const diffMin = Math.floor(diffMs / 60000);
+        const diffHour = Math.floor(diffMs / 3600000);
+        const diffDay = Math.floor(diffMs / 86400000);
+
+        if (diffMin < 1) return "방금 전";
+        if (diffMin < 60) return diffMin + "분 전";
+        if (diffHour < 24) return diffHour + "시간 전";
+        if (diffDay < 5) return diffDay + "일 전";
+        return isoStr.slice(0, 10);
+    }
+
+    document.querySelectorAll('.relative-time').forEach(td => {
+        td.textContent = formatRelativeTime(td.dataset.datetime);
+        td.title = td.dataset.datetime;
+    });
+
+    document.querySelectorAll('tr[data-updated]').forEach(tr => {
+        const updated = (tr.dataset.updated || "").slice(0, 10);
+        if (updated === todayStr) {
+            tr.classList.add('bg-warning/10');
+        } else if (updated === yesterdayStr) {
+            tr.classList.add('bg-info/5');
+        }
+    });
+})();
+</script>
 
 {% else %}
 

@@ -40,6 +40,8 @@ class IssueInfo:
     priority: str = ""           # 우선순위 이름 (예: "High")
     priority_icon_url: str = ""  # 우선순위 아이콘 URL
     labels: tuple[str, ...] = () # 레이블 목록
+    created: str = ""   # 생성일 (ISO 8601)
+    updated: str = ""   # 변경일 (ISO 8601)
 
 
 @dataclass
@@ -257,6 +259,8 @@ class JiraService:
                 priority=priority.get("name", ""),
                 priority_icon_url=priority.get("iconUrl", ""),
                 labels=tuple(fields.get("labels") or []),
+                created=fields.get("created") or "",
+                updated=fields.get("updated") or "",
             )
         except (KeyError, TypeError) as e:
             logger.warning("이슈 파싱 실패 %s: %s", issue.get("key"), e)

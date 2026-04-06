@@ -80,13 +80,15 @@ class SprintReport:
 
     @property
     def dev_issues(self) -> list[IssueInfo]:
-        """개발팀 이슈 flat 리스트."""
-        return [i for ar in self.by_dev_team for i in ar.issues]
+        """개발팀 이슈 flat 리스트 (변경일 내림차순)."""
+        issues = [i for ar in self.by_dev_team for i in ar.issues]
+        return sorted(issues, key=lambda i: i.updated, reverse=True)
 
     @property
     def line_issues(self) -> list[IssueInfo]:
-        """라인 이슈 flat 리스트."""
-        return [i for ar in self.by_line_team for i in ar.issues]
+        """라인 이슈 flat 리스트 (변경일 내림차순)."""
+        issues = [i for ar in self.by_line_team for i in ar.issues]
+        return sorted(issues, key=lambda i: i.updated, reverse=True)
 
 
 class ReportService:
