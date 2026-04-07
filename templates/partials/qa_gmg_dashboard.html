@@ -100,7 +100,12 @@
         <h3 class="text-lg font-semibold flex items-center gap-2">
             <span class="text-warning">★</span> 별표 이슈 리스트
         </h3>
-        <span id="starred-count" class="badge badge-warning badge-sm">0건</span>
+        <div class="flex items-center gap-2">
+            <span id="starred-count" class="badge badge-warning badge-sm">0건</span>
+            <button class="btn btn-ghost btn-xs export-btn" data-panel="별표 이슈 리스트" data-table-id="starred-table" title="Markdown으로 내보내기">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </button>
+        </div>
     </div>
     <div class="overflow-x-auto">
         <table id="starred-table" class="table table-sm" data-has-star="true">
@@ -128,11 +133,16 @@
 <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold">개발팀 이슈 리스트</h3>
-        <span id="dev-count" class="badge badge-outline badge-sm">{{ report.dev_issues|length }}건</span>
+        <div class="flex items-center gap-2">
+            <span id="dev-count" class="badge badge-outline badge-sm">{{ report.dev_issues|length }}건</span>
+            <button class="btn btn-ghost btn-xs export-btn" data-panel="개발팀 이슈 리스트" data-table-id="dev-table" title="Markdown으로 내보내기">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </button>
+        </div>
     </div>
     {% if report.dev_issues %}
     <div class="overflow-x-auto">
-        <table class="table table-sm" data-has-star="true">
+        <table id="dev-table" class="table table-sm" data-has-star="true">
             <thead>
                 <tr>
                     <th class="w-8"></th>
@@ -208,11 +218,16 @@
 <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold">라인 이슈 리스트</h3>
-        <span class="badge badge-outline badge-sm">{{ report.line_issues|length }}건</span>
+        <div class="flex items-center gap-2">
+            <span class="badge badge-outline badge-sm">{{ report.line_issues|length }}건</span>
+            <button class="btn btn-ghost btn-xs export-btn" data-panel="라인 이슈 리스트" data-table-id="line-table" title="Markdown으로 내보내기">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </button>
+        </div>
     </div>
     {% if report.line_issues %}
     <div class="overflow-x-auto">
-        <table class="table table-sm" data-has-star="false">
+        <table id="line-table" class="table table-sm" data-has-star="false">
             <thead>
                 <tr>
                     <th class="w-28 cursor-pointer select-none" data-sort-col="0">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
@@ -481,6 +496,85 @@
         });
         updateStarredSection();
     })();
+
+    /* ── Markdown 익스포트 ── */
+    function exportToMarkdown(panelName, tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+
+        const hasStar = table.dataset.hasStar === 'true';
+        const headers = [];
+        const colIndices = [];
+
+        /* 헤더 추출 (별표 컬럼 제외) */
+        table.querySelectorAll('thead th').forEach((th, idx) => {
+            if (hasStar && idx === 0) return;
+            const text = th.textContent.replace(/[↕▲▼]/g, '').trim();
+            if (!text) return;
+            headers.push(text);
+            colIndices.push(idx);
+        });
+
+        /* 행 데이터 추출 */
+        const rows = [];
+        table.querySelectorAll('tbody tr').forEach(tr => {
+            const row = [];
+            colIndices.forEach(idx => {
+                const td = tr.cells[idx];
+                if (!td) { row.push(''); return; }
+                /* 이슈 ID 컬럼은 Jira 링크 포함 */
+                const link = td.querySelector('a[href]');
+                if (link) {
+                    row.push('[' + link.textContent.trim() + '](' + link.href + ')');
+                /* 날짜 컬럼은 원본 datetime 사용 */
+                } else if (td.dataset.datetime) {
+                    row.push((td.dataset.datetime || '').slice(0, 10));
+                } else {
+                    row.push(td.textContent.trim().replace(/\s+/g, ' '));
+                }
+            });
+            rows.push(row);
+        });
+
+        if (rows.length === 0) return;
+
+        /* MD 테이블 생성 */
+        const now = new Date();
+        const timestamp = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0') + ' ' +
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0');
+
+        let md = `# ${panelName}\n\n`;
+        md += `> 익스포트 시각: ${timestamp}\n\n`;
+        md += '| ' + headers.join(' | ') + ' |\n';
+        md += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+        rows.forEach(row => {
+            md += '| ' + row.join(' | ') + ' |\n';
+        });
+
+        /* 파일 다운로드 */
+        const dateStr = now.getFullYear() +
+            String(now.getMonth() + 1).padStart(2, '0') +
+            String(now.getDate()).padStart(2, '0');
+        const filename = `${panelName.replace(/\s+/g, '_')}_${dateStr}.md`;
+
+        const blob = new Blob([md], { type: 'text/markdown; charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.export-btn');
+        if (btn) {
+            exportToMarkdown(btn.dataset.panel, btn.dataset.tableId);
+        }
+    });
 })();
 </script>
 
