@@ -8,16 +8,16 @@
 <!-- Bento Grid: Stats -->
 <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
     <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
-        <div class="stat-title">전체 이슈</div>
-        <div class="stat-value text-primary">{{ report.total_issues }}</div>
+        <div class="stat-title">개발팀 이슈</div>
+        <div class="stat-value text-primary">{{ report.dev_active_count }}</div>
     </div>
     <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
-        <div class="stat-title">완료</div>
-        <div class="stat-value text-success">{{ report.done_count }}</div>
+        <div class="stat-title">우선순위 높음 이상</div>
+        <div class="stat-value text-error">{{ report.dev_high_priority_count }}</div>
     </div>
     <div class="stat bg-base-100 rounded-2xl shadow-sm border border-base-300">
-        <div class="stat-title">진행중</div>
-        <div class="stat-value text-info">{{ report.in_progress_count }}</div>
+        <div class="stat-title">텍스트 이슈</div>
+        <div class="stat-value text-info">{{ report.dev_text_issue_count(text_parent_key) }}</div>
     </div>
 </div>
 

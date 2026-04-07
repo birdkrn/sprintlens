@@ -41,6 +41,7 @@ def init_qa_gmg_routes(
             jira_base_url=config.jira_base_url,
             starred_keys=starred_keys,
             new_issue_days=config.qa_gmg_new_issue_days,
+            text_parent_key=config.qa_gmg_text_parent_key,
             config=config,
         )
 

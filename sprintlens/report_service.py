@@ -109,6 +109,29 @@ class SprintReport:
         return sorted(issues, key=lambda i: i.updated, reverse=True)
 
     @property
+    def dev_active_count(self) -> int:
+        """개발팀 활성 이슈 수 (홀드 제외)."""
+        return len(self.dev_issues_active)
+
+    @property
+    def dev_high_priority_count(self) -> int:
+        """개발팀 활성 이슈 중 High 이상 우선순위 수."""
+        high_priorities = {"Highest", "High"}
+        return sum(
+            1 for i in self.dev_issues_active
+            if i.priority in high_priorities
+        )
+
+    def dev_text_issue_count(self, parent_key: str) -> int:
+        """개발팀 활성 이슈 중 특정 부모 이슈의 부작업 수."""
+        if not parent_key:
+            return 0
+        return sum(
+            1 for i in self.dev_issues_active
+            if i.parent_key == parent_key
+        )
+
+    @property
     def line_issues(self) -> list[IssueInfo]:
         """라인 이슈 flat 리스트 (변경일 내림차순)."""
         issues = [i for ar in self.by_line_team for i in ar.issues]

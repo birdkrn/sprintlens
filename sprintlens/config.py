@@ -62,6 +62,7 @@ class Config:
     # QA_GMG 팀 멤버
     qa_gmg_dev_members: tuple[str, ...] = ()  # 개발팀 멤버 (이 외는 라인으로 분류)
     qa_gmg_new_issue_days: int = 3  # 신규 이슈 판별 기준 일수
+    qa_gmg_text_parent_key: str = ""  # 텍스트 이슈 부모 키 (예: QAGMG-211)
 
     # Confluence
     confluence_base_url: str = ""
@@ -212,6 +213,7 @@ def load_config() -> Config:
             if name.strip()
         ),
         qa_gmg_new_issue_days=int(os.getenv("QA_GMG_NEW_ISSUE_DAYS", "3")),
+        qa_gmg_text_parent_key=os.getenv("QA_GMG_TEXT_PARENT_KEY", ""),
         confluence_base_url=os.getenv("CONFLUENCE_BASE_URL", ""),
         confluence_username=os.getenv("CONFLUENCE_USERNAME", ""),
         confluence_password=os.getenv("CONFLUENCE_PASSWORD", ""),
