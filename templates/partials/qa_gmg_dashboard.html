@@ -134,13 +134,13 @@
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold">개발팀 이슈 리스트</h3>
         <div class="flex items-center gap-2">
-            <span id="dev-count" class="badge badge-outline badge-sm">{{ report.dev_issues|length }}건</span>
+            <span id="dev-count" class="badge badge-outline badge-sm">{{ report.dev_issues_active|length }}건</span>
             <button class="btn btn-ghost btn-xs export-btn" data-panel="개발팀 이슈 리스트" data-table-id="dev-table" title="Markdown으로 내보내기">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </button>
         </div>
     </div>
-    {% if report.dev_issues %}
+    {% if report.dev_issues_active %}
     <div class="overflow-x-auto">
         <table id="dev-table" class="table table-sm" data-has-star="true">
             <thead>
@@ -158,7 +158,7 @@
                 </tr>
             </thead>
             <tbody id="dev-tbody">
-                {% for issue in report.dev_issues %}
+                {% for issue in report.dev_issues_active %}
                 <tr class="hover" data-updated="{{ issue.updated }}" data-issue-key="{{ issue.key }}">
                     <td>
                         <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
@@ -213,6 +213,89 @@
     <p class="text-sm text-base-content/50">개발팀 이슈가 없습니다.</p>
     {% endif %}
 </div>
+
+<!-- 개발팀 이슈 리스트 - 홀드 -->
+{% if report.dev_issues_hold %}
+<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">개발팀 이슈 리스트 - 홀드</h3>
+        <div class="flex items-center gap-2">
+            <span id="dev-hold-count" class="badge badge-outline badge-sm">{{ report.dev_issues_hold|length }}건</span>
+            <button class="btn btn-ghost btn-xs export-btn" data-panel="개발팀 이슈 리스트 - 홀드" data-table-id="dev-hold-table" title="Markdown으로 내보내기">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table id="dev-hold-table" class="table table-sm" data-has-star="true">
+            <thead>
+                <tr>
+                    <th class="w-8"></th>
+                    <th class="w-28 cursor-pointer select-none" data-sort-col="1">이슈 ID <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="w-8 cursor-pointer select-none" data-sort-col="2">유형 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="3">우선순위 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="4">제목 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="5">레이블 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="6">상태 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="7">담당자 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="8">생성일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                    <th class="cursor-pointer select-none" data-sort-col="9">변경일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
+                </tr>
+            </thead>
+            <tbody id="dev-hold-tbody">
+                {% for issue in report.dev_issues_hold %}
+                <tr class="hover" data-updated="{{ issue.updated }}" data-issue-key="{{ issue.key }}">
+                    <td>
+                        <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
+                            {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
+                        </span>
+                    </td>
+                    <td data-sort-value="{{ issue.key }}">
+                        <a
+                            href="{{ jira_base_url }}/browse/{{ issue.key }}"
+                            target="_blank"
+                            class="link link-primary font-mono text-xs"
+                        >{{ issue.key }}</a>
+                    </td>
+                    <td data-sort-value="{{ {'버그':0,'부작업':1,'문의':2,'건의':3}.get(issue.issue_type, 99) }}">
+                        <span class="flex items-center gap-1">
+                            {% if issue.icon_url %}
+                            <img src="{{ issue.icon_url }}" alt="{{ issue.issue_type }}" class="w-4 h-4">
+                            {% endif %}
+                            <span class="text-xs">{{ issue.issue_type }}</span>
+                        </span>
+                    </td>
+                    <td data-sort-value="{{ {'Highest':0,'High':1,'Medium':2,'Low':3,'Lowest':4}.get(issue.priority, 99) }}">
+                        {% if issue.priority_icon_url %}
+                        <span class="flex items-center gap-1">
+                            <img src="{{ issue.priority_icon_url }}" alt="{{ issue.priority }}" class="w-4 h-4">
+                            <span class="text-xs">{{ issue.priority }}</span>
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="max-w-md truncate" data-sort-value="{{ issue.summary }}" title="{{ issue.summary }}">
+                        {{ issue.summary }}
+                    </td>
+                    <td class="text-xs label-sort" data-sort-value="" data-labels="{{ issue.labels | join(',') }}">{{ issue.labels | join(", ") }}</td>
+                    <td data-sort-value="{{ {'작업 중':0,'이슈 (할당됨)':1,'작업 중(홀드)':2}.get(issue.status, 99) }}">
+                        {% if issue.status_category == 'done' %}
+                        <span class="badge badge-success badge-sm gap-1">{{ issue.status }}</span>
+                        {% elif issue.status_category == 'indeterminate' %}
+                        <span class="badge badge-info badge-sm gap-1">{{ issue.status }}</span>
+                        {% else %}
+                        <span class="badge badge-ghost badge-sm gap-1">{{ issue.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td data-sort-value="{{ issue.assignee or '미배정' }}">{{ issue.assignee or '미배정' }}</td>
+                    <td class="text-xs text-base-content/70 relative-time" data-sort-value="{{ issue.created }}" data-datetime="{{ issue.created }}"></td>
+                    <td class="text-xs text-base-content/70 relative-time" data-sort-value="{{ issue.updated }}" data-datetime="{{ issue.updated }}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 <!-- 라인 이슈 리스트 -->
 <div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 p-5 mb-6">
@@ -458,7 +541,14 @@
                 el.textContent = '☆';
                 el.classList.remove('text-warning');
                 el.classList.add('text-base-content/20');
-                devTbody.appendChild(tr);
+                /* 상태 컬럼(col 6)의 텍스트로 홀드 여부 판단 */
+                const statusText = tr.cells[6] ? tr.cells[6].textContent.toLowerCase() : '';
+                if (statusText.includes('hold') || statusText.includes('홀드')) {
+                    const holdTbody = document.getElementById('dev-hold-tbody');
+                    if (holdTbody) holdTbody.appendChild(tr);
+                } else {
+                    devTbody.appendChild(tr);
+                }
             }
             updateStarredSection();
         });
@@ -486,13 +576,17 @@
     (function initStarred() {
         const starredTbody = document.getElementById('starred-tbody');
         const devTbody = document.getElementById('dev-tbody');
-        if (!starredTbody || !devTbody) return;
+        const holdTbody = document.getElementById('dev-hold-tbody');
+        if (!starredTbody) return;
 
-        devTbody.querySelectorAll('tr').forEach(tr => {
-            const star = tr.querySelector('.star-toggle');
-            if (star && star.textContent.trim() === '★') {
-                starredTbody.appendChild(tr);
-            }
+        [devTbody, holdTbody].forEach(tbody => {
+            if (!tbody) return;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const star = tr.querySelector('.star-toggle');
+                if (star && star.textContent.trim() === '★') {
+                    starredTbody.appendChild(tr);
+                }
+            });
         });
         updateStarredSection();
     })();

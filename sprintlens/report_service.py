@@ -84,6 +84,30 @@ class SprintReport:
         issues = [i for ar in self.by_dev_team for i in ar.issues]
         return sorted(issues, key=lambda i: i.updated, reverse=True)
 
+    @staticmethod
+    def _is_hold(status: str) -> bool:
+        """홀드 상태인지 판별한다 (영문 hold / 한글 홀드)."""
+        s = status.lower()
+        return "hold" in s or "홀드" in s
+
+    @property
+    def dev_issues_active(self) -> list[IssueInfo]:
+        """개발팀 이슈 중 홀드 제외 (변경일 내림차순)."""
+        issues = [
+            i for ar in self.by_dev_team for i in ar.issues
+            if not self._is_hold(i.status)
+        ]
+        return sorted(issues, key=lambda i: i.updated, reverse=True)
+
+    @property
+    def dev_issues_hold(self) -> list[IssueInfo]:
+        """개발팀 이슈 중 홀드만 (변경일 내림차순)."""
+        issues = [
+            i for ar in self.by_dev_team for i in ar.issues
+            if self._is_hold(i.status)
+        ]
+        return sorted(issues, key=lambda i: i.updated, reverse=True)
+
     @property
     def line_issues(self) -> list[IssueInfo]:
         """라인 이슈 flat 리스트 (변경일 내림차순)."""
