@@ -159,7 +159,7 @@
             </thead>
             <tbody id="dev-tbody">
                 {% for issue in report.dev_issues_active %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-issue-key="{{ issue.key }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-issue-key="{{ issue.key }}">
                     <td>
                         <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
                             {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
@@ -244,7 +244,7 @@
             </thead>
             <tbody id="dev-hold-tbody">
                 {% for issue in report.dev_issues_hold %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-issue-key="{{ issue.key }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-issue-key="{{ issue.key }}">
                     <td>
                         <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
                             {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
@@ -326,7 +326,7 @@
             </thead>
             <tbody>
                 {% for issue in report.line_issues %}
-                <tr class="hover" data-updated="{{ issue.updated }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}">
                     <td data-sort-value="{{ issue.key }}">
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
@@ -411,6 +411,26 @@
             tr.classList.add('bg-warning/10');
         } else if (updated === yesterdayStr) {
             tr.classList.add('bg-info/5');
+        }
+    });
+
+    /* ── 신규 QA 리포트 이슈 표시 ── */
+    const newIssueDays = {{ new_issue_days | default(3) }};
+    const cutoffDate = new Date(now);
+    cutoffDate.setDate(cutoffDate.getDate() - newIssueDays);
+    const initialStatuses = new Set(['미할당 이슈', '이슈 (할당됨)']);
+
+    document.querySelectorAll('tr[data-created]').forEach(tr => {
+        const created = new Date(tr.dataset.created);
+        const status = tr.dataset.status || '';
+        if (created >= cutoffDate && initialStatuses.has(status)) {
+            tr.classList.add('bg-error/5');
+            /* 이슈 ID 셀의 링크 앞에 빨간 점 삽입 */
+            const link = tr.querySelector('a.link-primary');
+            if (link && !tr.querySelector('.new-issue-dot')) {
+                link.insertAdjacentHTML('beforebegin',
+                    '<span class="new-issue-dot inline-block w-2 h-2 rounded-full bg-error mr-1 align-middle"></span>');
+            }
         }
     });
 

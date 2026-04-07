@@ -61,6 +61,7 @@ class Config:
 
     # QA_GMG 팀 멤버
     qa_gmg_dev_members: tuple[str, ...] = ()  # 개발팀 멤버 (이 외는 라인으로 분류)
+    qa_gmg_new_issue_days: int = 3  # 신규 이슈 판별 기준 일수
 
     # Confluence
     confluence_base_url: str = ""
@@ -210,6 +211,7 @@ def load_config() -> Config:
             for name in os.getenv("QA_GMG_DEV_MEMBERS", "").split(",")
             if name.strip()
         ),
+        qa_gmg_new_issue_days=int(os.getenv("QA_GMG_NEW_ISSUE_DAYS", "3")),
         confluence_base_url=os.getenv("CONFLUENCE_BASE_URL", ""),
         confluence_username=os.getenv("CONFLUENCE_USERNAME", ""),
         confluence_password=os.getenv("CONFLUENCE_PASSWORD", ""),
