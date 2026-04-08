@@ -1,8 +1,15 @@
 {% if report %}
 
 <!-- Header -->
-<div class="mb-6">
+<div class="mb-6 flex items-center gap-3">
     <h2 class="text-2xl font-bold">{{ report.sprint.name }}</h2>
+    <div id="filter-indicator" class="hidden">
+        <button id="filter-clear-btn" class="btn btn-ghost btn-sm gap-1 text-error border border-error/20" title="필터 해제">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            <span id="filter-label" class="text-xs"></span>
+            <span class="text-xs">✕</span>
+        </button>
+    </div>
 </div>
 
 <!-- Bento Grid: Stats -->
@@ -39,7 +46,7 @@
                 </thead>
                 <tbody>
                     {% for ar in report.by_dev_team %}
-                    <tr class="hover">
+                    <tr class="hover cursor-pointer assignee-filter-row" data-assignee="{{ ar.name }}">
                         <td class="font-medium">{{ ar.name }}</td>
                         <td class="text-center">{{ ar.total }}</td>
                         <td class="text-center">
@@ -159,7 +166,7 @@
             </thead>
             <tbody id="dev-tbody">
                 {% for issue in report.dev_issues_active %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-issue-key="{{ issue.key }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}" data-issue-key="{{ issue.key }}">
                     <td>
                         <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
                             {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
@@ -244,7 +251,7 @@
             </thead>
             <tbody id="dev-hold-tbody">
                 {% for issue in report.dev_issues_hold %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-issue-key="{{ issue.key }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}" data-issue-key="{{ issue.key }}">
                     <td>
                         <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
                             {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
@@ -324,9 +331,9 @@
                     <th class="cursor-pointer select-none" data-sort-col="8">변경일 <span class="sort-arrow text-xs opacity-30">↕</span></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="line-tbody">
                 {% for issue in report.line_issues %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}">
                     <td data-sort-value="{{ issue.key }}">
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
@@ -689,6 +696,102 @@
             exportToMarkdown(btn.dataset.panel, btn.dataset.tableId);
         }
     });
+
+    /* ══════════════════════════════════════════
+       필터링 시스템 (확장 가능 구조)
+       ══════════════════════════════════════════ */
+    const filterState = {
+        assignee: null,
+        /* 향후 확장: priority: null, label: null, ... */
+    };
+
+    const filterTbodies = ['starred-tbody', 'dev-tbody', 'dev-hold-tbody', 'line-tbody'];
+    const filterCountMap = {
+        'starred-tbody': 'starred-count',
+        'dev-tbody': 'dev-count',
+        'dev-hold-tbody': 'dev-hold-count',
+    };
+
+    function applyFilters() {
+        const hasFilter = Object.values(filterState).some(v => v !== null);
+
+        filterTbodies.forEach(tbodyId => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                let visible = true;
+                if (filterState.assignee) {
+                    visible = visible && (tr.dataset.assignee === filterState.assignee);
+                }
+                /* 향후: if (filterState.priority) { ... } */
+                tr.style.display = visible ? '' : 'none';
+            });
+        });
+
+        updateFilterIndicator();
+        updateFilteredCounts();
+    }
+
+    function updateFilterIndicator() {
+        const indicator = document.getElementById('filter-indicator');
+        const label = document.getElementById('filter-label');
+        const hasFilter = Object.values(filterState).some(v => v !== null);
+
+        if (hasFilter) {
+            indicator.classList.remove('hidden');
+            const parts = [];
+            if (filterState.assignee) parts.push('담당자: ' + filterState.assignee);
+            /* 향후: if (filterState.priority) parts.push(...) */
+            label.textContent = parts.join(', ');
+        } else {
+            indicator.classList.add('hidden');
+        }
+    }
+
+    function updateFilteredCounts() {
+        Object.entries(filterCountMap).forEach(([tbodyId, countId]) => {
+            const tbody = document.getElementById(tbodyId);
+            const countEl = document.getElementById(countId);
+            if (!tbody || !countEl) return;
+            const visible = tbody.querySelectorAll('tr:not([style*="display: none"])').length;
+            countEl.textContent = visible + '건';
+        });
+    }
+
+    function clearFilters() {
+        filterState.assignee = null;
+        /* 향후: filterState.priority = null; ... */
+        document.querySelectorAll('.assignee-filter-row').forEach(tr => {
+            tr.classList.remove('bg-primary/10');
+        });
+        applyFilters();
+    }
+
+    /* 담당자 행 클릭 */
+    document.addEventListener('click', function(e) {
+        const row = e.target.closest('.assignee-filter-row');
+        if (!row) return;
+
+        const name = row.dataset.assignee;
+        if (filterState.assignee === name) {
+            /* 같은 담당자 재클릭 → 해제 */
+            clearFilters();
+        } else {
+            /* 새 담당자 선택 */
+            document.querySelectorAll('.assignee-filter-row').forEach(tr => {
+                tr.classList.remove('bg-primary/10');
+            });
+            row.classList.add('bg-primary/10');
+            filterState.assignee = name;
+            applyFilters();
+        }
+    });
+
+    /* 필터 해제 버튼 */
+    const clearBtn = document.getElementById('filter-clear-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearFilters);
+    }
 })();
 </script>
 

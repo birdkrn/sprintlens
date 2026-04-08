@@ -6,6 +6,7 @@ module.exports = {
     "bg-error",
     "bg-warning/10",
     "bg-info/5",
+    "bg-primary/10",
   ],
   theme: {
     extend: {},
