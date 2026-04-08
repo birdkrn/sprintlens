@@ -3,14 +3,56 @@
 <!-- Header -->
 <div class="mb-6 flex items-center gap-3">
     <h2 class="text-2xl font-bold">{{ report.sprint.name }}</h2>
-    <div id="filter-indicator" class="hidden">
-        <button id="filter-clear-btn" class="btn btn-ghost btn-sm gap-1 text-error border border-error/20" title="필터 해제">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
-            <span id="filter-label" class="text-xs"></span>
-            <span class="text-xs">✕</span>
-        </button>
-    </div>
+    <!-- 필터 버튼 -->
+    <button id="filter-open-btn" class="btn btn-ghost btn-sm gap-1 border border-base-300" onclick="document.getElementById('filter-modal').showModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+        필터
+    </button>
+    <!-- 활성 필터 뱃지 (헤더에 간결하게 표시) -->
+    <div id="active-filters" class="flex flex-wrap gap-1 hidden"></div>
+    <button id="filter-clear-all" class="btn btn-ghost btn-xs text-error hidden">전체 해제</button>
 </div>
+
+<!-- 필터 모달 -->
+<dialog id="filter-modal" class="modal">
+    <div class="modal-box max-w-3xl">
+        <h3 class="text-lg font-bold mb-5">필터 설정</h3>
+        <div id="filter-groups" class="space-y-1">
+            <!-- 유형 -->
+            <div class="filter-group py-3 border-b border-base-200" data-filter-key="issueType">
+                <h4 class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3">유형</h4>
+                <div class="flex flex-wrap gap-x-6 gap-y-2 filter-options"></div>
+            </div>
+            <!-- 우선순위 -->
+            <div class="filter-group py-3 border-b border-base-200" data-filter-key="priority">
+                <h4 class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3">우선순위</h4>
+                <div class="flex flex-wrap gap-x-6 gap-y-2 filter-options"></div>
+            </div>
+            <!-- 상태 -->
+            <div class="filter-group py-3 border-b border-base-200" data-filter-key="status">
+                <h4 class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3">상태</h4>
+                <div class="grid grid-cols-3 gap-x-4 gap-y-2 filter-options"></div>
+            </div>
+            <!-- 레이블 -->
+            <div class="filter-group py-3 border-b border-base-200" data-filter-key="labels">
+                <h4 class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3">레이블</h4>
+                <div class="grid grid-cols-4 gap-x-4 gap-y-2 filter-options"></div>
+            </div>
+            <!-- 담당자 -->
+            <div class="filter-group py-3" data-filter-key="assignee">
+                <h4 class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3">담당자</h4>
+                <div class="grid grid-cols-5 gap-x-4 gap-y-2 filter-options"></div>
+            </div>
+        </div>
+        <div class="modal-action">
+            <button id="filter-modal-clear" class="btn btn-ghost btn-sm">전체 해제</button>
+            <form method="dialog">
+                <button class="btn btn-primary btn-sm">닫기</button>
+            </form>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 
 <!-- Bento Grid: Stats -->
 <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
@@ -166,7 +208,7 @@
             </thead>
             <tbody id="dev-tbody">
                 {% for issue in report.dev_issues_active %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}" data-issue-key="{{ issue.key }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}" data-issue-key="{{ issue.key }}" data-priority="{{ issue.priority }}" data-issue-type="{{ issue.issue_type }}" data-labels="{{ issue.labels | join(',') }}">
                     <td>
                         <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
                             {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
@@ -251,7 +293,7 @@
             </thead>
             <tbody id="dev-hold-tbody">
                 {% for issue in report.dev_issues_hold %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}" data-issue-key="{{ issue.key }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}" data-issue-key="{{ issue.key }}" data-priority="{{ issue.priority }}" data-issue-type="{{ issue.issue_type }}" data-labels="{{ issue.labels | join(',') }}">
                     <td>
                         <span class="star-toggle cursor-pointer text-lg {% if issue.key in starred_keys %}text-warning{% else %}text-base-content/20{% endif %}" data-key="{{ issue.key }}">
                             {% if issue.key in starred_keys %}★{% else %}☆{% endif %}
@@ -309,7 +351,7 @@
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold">라인 이슈 리스트</h3>
         <div class="flex items-center gap-2">
-            <span class="badge badge-outline badge-sm">{{ report.line_issues|length }}건</span>
+            <span id="line-count" class="badge badge-outline badge-sm">{{ report.line_issues|length }}건</span>
             <button class="btn btn-ghost btn-xs export-btn" data-panel="라인 이슈 리스트" data-table-id="line-table" title="Markdown으로 내보내기">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </button>
@@ -333,7 +375,7 @@
             </thead>
             <tbody id="line-tbody">
                 {% for issue in report.line_issues %}
-                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}">
+                <tr class="hover" data-updated="{{ issue.updated }}" data-created="{{ issue.created }}" data-status="{{ issue.status }}" data-assignee="{{ issue.assignee or '미배정' }}" data-priority="{{ issue.priority }}" data-issue-type="{{ issue.issue_type }}" data-labels="{{ issue.labels | join(',') }}">
                     <td data-sort-value="{{ issue.key }}">
                         <a
                             href="{{ jira_base_url }}/browse/{{ issue.key }}"
@@ -698,11 +740,22 @@
     });
 
     /* ══════════════════════════════════════════
-       필터링 시스템 (확장 가능 구조)
+       필터링 시스템 (다중 필터 AND/OR 조합)
        ══════════════════════════════════════════ */
     const filterState = {
-        assignee: null,
-        /* 향후 확장: priority: null, label: null, ... */
+        issueType: new Set(),
+        priority: new Set(),
+        labels: new Set(),
+        status: new Set(),
+        assignee: new Set(),
+    };
+
+    const filterKeyLabels = {
+        issueType: '유형',
+        priority: '우선순위',
+        labels: '레이블',
+        status: '상태',
+        assignee: '담당자',
     };
 
     const filterTbodies = ['starred-tbody', 'dev-tbody', 'dev-hold-tbody', 'line-tbody'];
@@ -710,44 +763,137 @@
         'starred-tbody': 'starred-count',
         'dev-tbody': 'dev-count',
         'dev-hold-tbody': 'dev-hold-count',
+        'line-tbody': 'line-count',
     };
 
-    function applyFilters() {
-        const hasFilter = Object.values(filterState).some(v => v !== null);
+    /* DOM에서 유니크한 필터 옵션 추출 */
+    function collectFilterOptions() {
+        const options = {};
+        Object.keys(filterState).forEach(key => { options[key] = new Set(); });
+        filterTbodies.forEach(tbodyId => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            tbody.querySelectorAll('tr').forEach(tr => {
+                if (tr.dataset.issueType) options.issueType.add(tr.dataset.issueType);
+                if (tr.dataset.priority) options.priority.add(tr.dataset.priority);
+                if (tr.dataset.status) options.status.add(tr.dataset.status);
+                if (tr.dataset.assignee) options.assignee.add(tr.dataset.assignee);
+                (tr.dataset.labels || '').split(',').filter(Boolean).forEach(l => options.labels.add(l));
+            });
+        });
+        return options;
+    }
 
+    /* 모달 내 체크박스 목록 생성 */
+    function buildFilterModal() {
+        const options = collectFilterOptions();
+        const priorityOrder = ['Highest', 'High', 'Medium', 'Low', 'Lowest'];
+
+        document.querySelectorAll('#filter-groups .filter-group').forEach(group => {
+            const key = group.dataset.filterKey;
+            const container = group.querySelector('.filter-options');
+            if (!container || !options[key]) return;
+            container.innerHTML = '';
+
+            let values = [...options[key]];
+            if (key === 'priority') {
+                values.sort((a, b) => {
+                    const ia = priorityOrder.indexOf(a);
+                    const ib = priorityOrder.indexOf(b);
+                    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+                });
+            } else {
+                values.sort((a, b) => a.localeCompare(b, 'ko'));
+            }
+
+            const isGrid = container.classList.contains('grid');
+            values.forEach(val => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center gap-2 cursor-pointer' + (isGrid ? ' min-w-0' : '');
+                label.innerHTML = '<input type="checkbox" class="checkbox checkbox-sm checkbox-primary shrink-0" value="' +
+                    val.replace(/"/g, '&quot;') + '" data-filter-key="' + key + '">' +
+                    '<span class="text-sm' + (isGrid ? ' truncate' : '') + '">' + val + '</span>';
+                container.appendChild(label);
+            });
+        });
+    }
+
+    /* 필터 적용: 카테고리 간 AND, 카테고리 내 OR */
+    function applyFilters() {
         filterTbodies.forEach(tbodyId => {
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
             tbody.querySelectorAll('tr').forEach(tr => {
                 let visible = true;
-                if (filterState.assignee) {
-                    visible = visible && (tr.dataset.assignee === filterState.assignee);
+                if (filterState.issueType.size > 0) {
+                    visible = visible && filterState.issueType.has(tr.dataset.issueType);
                 }
-                /* 향후: if (filterState.priority) { ... } */
+                if (filterState.priority.size > 0) {
+                    visible = visible && filterState.priority.has(tr.dataset.priority);
+                }
+                if (filterState.status.size > 0) {
+                    visible = visible && filterState.status.has(tr.dataset.status);
+                }
+                if (filterState.assignee.size > 0) {
+                    visible = visible && filterState.assignee.has(tr.dataset.assignee);
+                }
+                if (filterState.labels.size > 0) {
+                    const issueLabels = (tr.dataset.labels || '').split(',').filter(Boolean);
+                    visible = visible && issueLabels.some(l => filterState.labels.has(l));
+                }
                 tr.style.display = visible ? '' : 'none';
             });
         });
 
-        updateFilterIndicator();
+        updateActiveFilters();
         updateFilteredCounts();
+        syncModalCheckboxes();
+        syncAssigneeRows();
+        updateFilterButton();
     }
 
-    function updateFilterIndicator() {
-        const indicator = document.getElementById('filter-indicator');
-        const label = document.getElementById('filter-label');
-        const hasFilter = Object.values(filterState).some(v => v !== null);
+    /* 헤더의 활성 필터 뱃지 업데이트 */
+    function updateActiveFilters() {
+        const container = document.getElementById('active-filters');
+        const clearAllBtn = document.getElementById('filter-clear-all');
+        const hasFilter = Object.values(filterState).some(s => s.size > 0);
 
+        container.innerHTML = '';
         if (hasFilter) {
-            indicator.classList.remove('hidden');
-            const parts = [];
-            if (filterState.assignee) parts.push('담당자: ' + filterState.assignee);
-            /* 향후: if (filterState.priority) parts.push(...) */
-            label.textContent = parts.join(', ');
+            container.classList.remove('hidden');
+            clearAllBtn.classList.remove('hidden');
+            Object.entries(filterState).forEach(([key, values]) => {
+                values.forEach(val => {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge badge-primary badge-sm gap-1 cursor-pointer';
+                    badge.innerHTML = filterKeyLabels[key] + ': ' + val + ' <span class="text-xs font-bold">&#10005;</span>';
+                    badge.addEventListener('click', () => {
+                        filterState[key].delete(val);
+                        applyFilters();
+                    });
+                    container.appendChild(badge);
+                });
+            });
         } else {
-            indicator.classList.add('hidden');
+            container.classList.add('hidden');
+            clearAllBtn.classList.add('hidden');
         }
     }
 
+    /* 필터 버튼 활성 상태 업데이트 */
+    function updateFilterButton() {
+        const btn = document.getElementById('filter-open-btn');
+        const hasFilter = Object.values(filterState).some(s => s.size > 0);
+        if (hasFilter) {
+            btn.classList.add('btn-primary');
+            btn.classList.remove('btn-ghost');
+        } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-ghost');
+        }
+    }
+
+    /* 건수 업데이트 */
     function updateFilteredCounts() {
         Object.entries(filterCountMap).forEach(([tbodyId, countId]) => {
             const tbody = document.getElementById(tbodyId);
@@ -758,40 +904,69 @@
         });
     }
 
-    function clearFilters() {
-        filterState.assignee = null;
-        /* 향후: filterState.priority = null; ... */
-        document.querySelectorAll('.assignee-filter-row').forEach(tr => {
-            tr.classList.remove('bg-primary/10');
+    /* 모달 체크박스와 filterState 동기화 */
+    function syncModalCheckboxes() {
+        document.querySelectorAll('#filter-groups input[type="checkbox"]').forEach(cb => {
+            const key = cb.dataset.filterKey;
+            cb.checked = filterState[key] && filterState[key].has(cb.value);
         });
+    }
+
+    /* 담당자 현황 테이블 행 하이라이트 동기화 */
+    function syncAssigneeRows() {
+        document.querySelectorAll('.assignee-filter-row').forEach(tr => {
+            if (filterState.assignee.has(tr.dataset.assignee)) {
+                tr.classList.add('bg-primary/10');
+            } else {
+                tr.classList.remove('bg-primary/10');
+            }
+        });
+    }
+
+    /* 전체 필터 해제 */
+    function clearFilters() {
+        Object.values(filterState).forEach(s => s.clear());
         applyFilters();
     }
 
-    /* 담당자 행 클릭 */
+    /* 모달 체크박스 변경 이벤트 (실시간 필터 적용) */
+    document.getElementById('filter-groups').addEventListener('change', function(e) {
+        const cb = e.target.closest('input[type="checkbox"]');
+        if (!cb) return;
+        const key = cb.dataset.filterKey;
+        if (cb.checked) {
+            filterState[key].add(cb.value);
+        } else {
+            filterState[key].delete(cb.value);
+        }
+        applyFilters();
+    });
+
+    /* 전체 해제 버튼 (헤더) */
+    document.getElementById('filter-clear-all').addEventListener('click', clearFilters);
+
+    /* 전체 해제 버튼 (모달) */
+    document.getElementById('filter-modal-clear').addEventListener('click', function() {
+        clearFilters();
+        document.getElementById('filter-modal').close();
+    });
+
+    /* 담당자 행 클릭 → 담당자 필터 토글 */
     document.addEventListener('click', function(e) {
         const row = e.target.closest('.assignee-filter-row');
         if (!row) return;
 
         const name = row.dataset.assignee;
-        if (filterState.assignee === name) {
-            /* 같은 담당자 재클릭 → 해제 */
-            clearFilters();
+        if (filterState.assignee.has(name)) {
+            filterState.assignee.delete(name);
         } else {
-            /* 새 담당자 선택 */
-            document.querySelectorAll('.assignee-filter-row').forEach(tr => {
-                tr.classList.remove('bg-primary/10');
-            });
-            row.classList.add('bg-primary/10');
-            filterState.assignee = name;
-            applyFilters();
+            filterState.assignee.add(name);
         }
+        applyFilters();
     });
 
-    /* 필터 해제 버튼 */
-    const clearBtn = document.getElementById('filter-clear-btn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', clearFilters);
-    }
+    /* 초기 모달 메뉴 구성 */
+    buildFilterModal();
 })();
 </script>
 

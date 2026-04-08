@@ -7,6 +7,9 @@ module.exports = {
     "bg-warning/10",
     "bg-info/5",
     "bg-primary/10",
+    "grid-cols-3",
+    "grid-cols-4",
+    "grid-cols-5",
   ],
   theme: {
     extend: {},
