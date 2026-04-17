@@ -256,6 +256,31 @@ ruff format --check .       # 포매팅 검사만
 docker-compose up --build
 ```
 
+## 서버 운영 (Windows)
+
+같은 머신에서 **운영 서버(5000)** 와 **개발 서버(5001)** 가 동시에 돌아간다. 포트를 섞지 말 것.
+
+### 운영 서버 (5000 포트)
+
+- **서비스 이름:** `SprintLens` (NSSM으로 등록된 Windows 서비스)
+- **포트:** `5000`
+- **접속 URL:** `http://localhost:5000`
+- **상태 확인:** `nssm status SprintLens` → `SERVICE_RUNNING`
+- **재시작:**
+  1. CSS를 바꿨다면 먼저 `npm run css:build` (정적 파일은 git에 커밋되는 빌드 산출물)
+  2. `restart-service.bat` 실행 (UAC 승격이 내장되어 있음 — 사용자 승인 프롬프트 발생)
+  3. 또는 관리자 권한 셸에서 직접 `nssm restart SprintLens`
+- **주의:** 일반 셸에서 `nssm restart`는 `OpenService()` 에러로 실패함. 반드시 `restart-service.bat`를 쓸 것.
+
+### 개발 서버 (5001 포트)
+
+- **포트:** `5001` (운영 5000과 충돌 방지)
+- **실행:** `FLASK_PORT=5001 .venv/Scripts/python.exe app.py` (백그라운드)
+- **로그:** `logs/dev-5001.log` (stdout/stderr 리다이렉트)
+- **종료:** `netstat -ano | grep :5001 | grep LISTENING` → PID 확인 → `taskkill //PID <PID> //F`
+- **재시작:** 종료 후 위 실행 명령 재실행. 설정(JSON/환경변수)은 기동 시 1회 로드되므로 변경 시 반드시 재시작 필요.
+- **참고:** `npm run dev`는 `SPRINTLENS_ENV=dev` + Tailwind watch를 동시에 돌리지만 포트 기본값이 5000이라 운영과 충돌함. 개발 서버 단독 기동은 위 방식을 사용할 것.
+
 ## gstack
 
 웹 브라우징이 필요한 경우 반드시 gstack의 `/browse` skill을 사용하세요. `mcp__claude-in-chrome__*` 도구는 절대 사용하지 마세요.
